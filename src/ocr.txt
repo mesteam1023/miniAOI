@@ -1,22 +1,15 @@
-24V
-Output
-|
-Salida
-|
-Sortie
+24V=
+Output | Salida | Sortie
 100 - 277 V~
-Input
-|
-Entrada
-|
-Entrée
+Input | Entrada | Entrée
 LUTRON
 QSPS-DH-1-75
 22.5 - 25.0 V=
 L
 N
-(
-+
 -
++
+(
 )
-L(+) N(-)
+L(-) N(+)
++ + - -

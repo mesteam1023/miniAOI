@@ -2,12 +2,13 @@ import asyncio
 import base64
 import json
 import random
+import subprocess
 import cv2 as cv
 import numpy as np
 import pytesseract
 from PIL import Image, ImageFont, ImageDraw
 from spellchecker import SpellChecker
-from capture_image import capture_frame, take_picture
+from capture_image import capture_frame, take_picture, raspi_io
 
 
 async def read_out_locations_need_to_be_checked(coordinate_file_path):
@@ -77,7 +78,7 @@ async def tranform_image(image_path, image=None, alpha=1.5, beta=-50.0, rotate=0
         resized = cv.resize(
             thresh,
             (int(adjusted.shape[1] * zoom), int(thresh.shape[0] * zoom)),
-            interpolation=cv.INTER_CUBIC,
+            interpolation=cv.INTER_LINEAR_EXACT,
         )
 
     # Gaussian Blur
@@ -89,19 +90,19 @@ async def tranform_image(image_path, image=None, alpha=1.5, beta=-50.0, rotate=0
     # sharpened = sharpen_image(median_blur)
 
     # Display the original and processed images
-    # cv.imshow('Original Image', adjusted)
+    # # cv.imshow('Original Image', adjusted)
     # cv.waitKey(0)
-    # cv.imshow('Grayscale Image', gray_image)
+    # # cv.imshow('Grayscale Image', gray_image)
     # cv.waitKey(0)
-    # cv.imshow('Edge Detection', sharpened)
+    # # cv.imshow('Edge Detection', sharpened)
     # cv.waitKey(0)
-    # cv.imshow('Threshold', thresh)
+    # # cv.imshow('Threshold', thresh)
     # cv.waitKey(0)
-    # cv.imshow('Resized', resized)
+    # # cv.imshow('Resized', resized)
     # cv.waitKey(0)
-    # cv.imshow('Gaussian Blur', gaussian_blur)
+    # # cv.imshow('Gaussian Blur', gaussian_blur)
     # cv.waitKey(0)
-    # cv.imshow('Median Blur', median_blur)
+    # # cv.imshow('Median Blur', median_blur)
 
     # Wait for a key press and then close all windows
     # cv.destroyAllWindows()
@@ -153,7 +154,7 @@ async def insert_image_into_white_base(image1, position, width=400, height=400):
     return base_image
 
 
-IMAGE_PATH = "captured_image_p.jpg"
+IMAGE_PATH = "captured_image.jpg"
 SOURCE_PATH = "Sources/source_image.jpg"
 COORDINATE_FILE_PATH = "coordinate.txt"
 
@@ -239,7 +240,7 @@ async def preprocess_image(image):
         ratio = 300 / h
         w = int(w * ratio)
         h = int(h * ratio)
-    img_resized = cv.resize(img_ocr, (w, h), interpolation=cv.INTER_CUBIC)
+    img_resized = cv.resize(img_ocr, (w, h), interpolation=cv.INTER_LINEAR_EXACT)
     img_resized = await insert_image_into_white_base(
         img_resized, (int(150 - w / 2), int(150 - h / 2)), 300, 300
     )
@@ -262,24 +263,29 @@ async def adjust_image(image, thresh):
 
 async def extract_text_from_image(image):
     global count
+    img = None
+    markup1 = None
+    markup2 = None
+    markup3 = None
     img = Image.fromarray(image)
-    rotated = img.rotate(-90, expand=True)
-    rotated.save(f"ocr{count}.jpg")
     count += 1
-    text = pytesseract.image_to_string(rotated)
-
+    #
+    text = pytesseract.image_to_string(img)
+    img.save(f"ocr{count}.jpg")
     print(text)
     if text != "" and text is not None:
         corrected = spell.correction(text)
         print(corrected)
     else:
-        markup1 = await preprocess_image(rotated)
-        markup2 = await adjust_image(markup1, 120)
+        #markup1 = await preprocess_image(img)
+        markup2 = await adjust_image(img, 90)
         markup3 = await correct_color(markup2)
-        # cv.imshow(f"ocr{count}.jpg", markup3)
+        # # cv.imshow(f"ocr{count}.jpg", markup3)
         count += 1
-        text = pytesseract.image_to_string(markup3)
+        text_img = Image.fromarray(markup3)
+        text = pytesseract.image_to_string(text_img)
         corrected = spell.correction(text)
+        text_img.save(f"ocr{count}.jpg")
         print(corrected)
 
     if corrected is not None:
@@ -338,7 +344,7 @@ DICTIONARY_FILE = "dictionary.txt"
 
 def add_special_words_to_dictionary():
     global spell
-    spell = SpellChecker(language=None, case_sensitive=True)
+    spell = SpellChecker(language=None, case_sensitive=False)
     spell.word_frequency.load_text_file(DICTIONARY_FILE, encoding="utf-8")
     return spell
 
@@ -402,7 +408,7 @@ async def compare_color_and_save_mask(image, source, roi, threshold=90):
     mask_path = f"Results/color_{roi}.jpg"
 
     # Save the mask
-    # cv.imshow(mask_path, diff)
+    # # cv.imshow(mask_path, diff)
 
     return color_difference > threshold, roi
 
@@ -430,24 +436,24 @@ async def calculate_async(area):
     )
     # hsv_partial_image = load_partial_image(hsv_image, top_left, bottom_right)
     # hsv_partial_path = 'Sources/hsv_partial_image.jpg'
-    # cv.imshow(hsv_partial_path, hsv_partial_image)
+    # # cv.imshow(hsv_partial_path, hsv_partial_image)
     partial_image = await load_partial_image(image, top_left, bottom_right)
     partial_path = "Sources/partial_image.jpg"
     # if partial_image is not None:
-    # cv.imshow(partial_path, partial_image)
-    # cv.imshow(partial_image)
+    # # cv.imshow(partial_path, partial_image)
+    # # cv.imshow(partial_image)
     partial_source_image = await load_partial_image(
         source_image, top_left, bottom_right
     )
     partial_source_path = "Sources/partial_source_image.jpg"
-    # cv.imshow(partial_source_path, partial_source_image)
-    # cv.imshow(partial_source_image)
+    # # cv.imshow(partial_source_path, partial_source_image)
+    # # cv.imshow(partial_source_image)
     partial_area_image = await load_partial_image(
         image, source_top_left, source_bottom_right
     )
     partial_area_path = "Sources/partial_area_image.jpg"
-    # cv.imshow(partial_area_path, partial_area_image)
-    # cv.imshow(partial_area_image)
+    # # cv.imshow(partial_area_path, partial_area_image)
+    # # cv.imshow(partial_area_image)
 
     # partial_area_image = cv.GaussianBlur(partial_area_image, (5, 5), 0)
     # partial_source_image = cv.GaussianBlur(partial_source_image, (5, 5), 0)
@@ -491,7 +497,7 @@ async def calculate_async(area):
             str(checking_content),
             position=bottom_right,
             font_path="Fonts/TitilliumWeb-Italic.ttf",
-            font_size=30,
+            font_size=10,
             text_color=(0, 0, 255),
         )
     _, encoded_image = cv.imencode(".jpg", partial_area_image)
@@ -506,8 +512,8 @@ async def calculate_async(area):
         "checkingContent": checking_content,
     }
     final_data.append(tmp)
-    # cv.imshow(f"Results/{item}-result.jpg", partial_area_image)
-    # cv.imshow(partial_area_image)
+    cv.imwrite(f"Results/{item}-result.jpg", partial_area_image)
+    # # cv.imshow(partial_area_image)
 
     if False in final_result:
         print("Defected")
@@ -519,12 +525,12 @@ async def calculate_async(area):
         visual_inspection_result = "PASS"
         visual_inspection_result_color = (0, 255, 0)
 
-    cv.imshow(
-        "final_result_image",
-        final_result_image,
-    )
+    # cv.imshow(
+    #     "final_result_image",
+    #     final_result_image,
+    # )
 
-    # cv.imshow(final_result_image)
+    # # cv.imshow(final_result_image)
     return final_data
 
 
@@ -560,7 +566,7 @@ async def check_not_in_position(image, template, area, original_image):
                 template, outer_top_left, bottom_right
             )
             similar_area = await get_similar_area(
-                captured_image, outer_top_left, bottom_right
+                captured_image, top_left, bottom_right
             )
             edge_difference, edges = await compare_features(
                 template_crop, similar_area, detect_edges
@@ -571,7 +577,7 @@ async def check_not_in_position(image, template, area, original_image):
             wrong_color, roi = await get_color(
                 edge_difference, corner_difference, similar_area, template_crop
             )
-            if edge_difference < 5 and corner_difference < 10 and not wrong_color:
+            if edge_difference < 5 and corner_difference < 9 and not wrong_color:
                 return False
 
     return True
@@ -617,7 +623,10 @@ async def get_color(edge_difference, corner_difference, similar_area, template_c
 
 
 async def detect_edges(image):
-    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    try:
+        gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    except:
+        gray = image
     blurred = cv.GaussianBlur(gray, (5, 5), 0)
     edges = cv.Canny(blurred, 50, 150)
     return edges
@@ -625,7 +634,7 @@ async def detect_edges(image):
 
 async def detect_corners(image):
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    good_corners = cv.goodFeaturesToTrack(gray, 200, 0.01, 5)
+    good_corners = cv.goodFeaturesToTrack(gray, 80, 0.01, 5)
     good_corners = np.intp(good_corners)
     corners = cv.cornerHarris(gray, 2, 3, 0.04)
     corners = cv.dilate(corners, None)
@@ -724,42 +733,59 @@ spell = None
 image = None  # Assign a default value to image
 content_text = None
 contents = None
+#subprocess.run("python3 ~/test_joint.py")
+#take_picture("captured_image.jpg")
 
-# take_picture("captured_image.jpg")
-source_image = cv.imread(SOURCE_PATH)
-image = cv.imread(IMAGE_PATH)
-final_result_image = image.copy()
-final_result = []
-final_data = []
-spell = add_special_words_to_dictionary()
-contents = []
-with open("ocr.txt") as file:
-    content_text = file.read()
-    for i in content_text.splitlines():
-        if i is not None and i != "":
-            spell.word_frequency.add(i)
-            contents.append(i)
-            print(contents)
+# capture_frame(False)
+# source_image = cv.imread(SOURCE_PATH)
+# image = cv.imread(IMAGE_PATH)
+# final_result_image = image.copy()
+# final_result = []
+# final_data = []
+# spell = add_special_words_to_dictionary()
+# contents = []
+# with open("ocr.txt") as file:
+#     content_text = file.read()
+#     for i in content_text.strip():
+#         if i is not None:
+#             spell.word_frequency.add(i)
 
 
 async def process_visual():
-    cv.namedWindow("Main Window")
-    cv.imshow("Main Windows", image)
 
     checking_areas = await read_out_locations_need_to_be_checked(COORDINATE_FILE_PATH)
     # tasks = [aoi(area) for area in filter(lambda x: x[0] == "s", checking_areas)]
 
     # ocr_array = asyncio.gather(*tasks)
-    main_tasks = (calculate_async(area) for area in checking_areas)
+    main_tasks = [calculate_async(area) for area in checking_areas]
     finish = await asyncio.gather(*main_tasks)
     # finish = await asyncio.gather(result)
     with open("ocr_result.txt", "w") as File:
         for item in finish:
             if item is not None:
                 File.write(str(item) + "\n")
+    return 'Done'
 
+# asyncio.run(process_visual())
+# cv.imwrite("Results/result.jpg", final_result_image)
 
-asyncio.run(process_visual())
-cv.waitKey(0)
-cv.imwrite("Results/result.jpg", final_result_image)
-cv.destroyAllWindows()
+async def async_checking():
+    global image,source_image
+    global final_result_image
+    await capture_frame(False)
+    source_image = cv.imread(SOURCE_PATH)
+    image = cv.imread(IMAGE_PATH)
+    final_result_image = image.copy()
+    final_result = []
+    final_data = []
+    spell = add_special_words_to_dictionary()
+    contents = []
+    with open("ocr.txt") as file:
+        content_text = file.read()
+        for i in content_text.strip():
+            if i is not None:
+                spell.word_frequency.add(i)    
+    # asyncio.run(process_visual())
+    await process_visual()
+    cv.imwrite("Results/result.jpg", final_result_image)
+    return ''

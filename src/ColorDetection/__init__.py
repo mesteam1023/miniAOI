@@ -32,7 +32,8 @@ def compare(areas):
             print("PASS")
             result = image.copy()
             cv2.rectangle(result, top_left, bottom_right, (0, 255, 0), 2)
-            result_final.append((i, "PASS"))
+            
+            result_final.append((areas.index(item), "PASS"))
         else:
             print(f"{image_path}: The mean color in the area is {mean_color}, which is NOT close to the "
                     f"reference color {mean_color_source}.")

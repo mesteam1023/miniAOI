@@ -1,52 +1,52 @@
 import subprocess
 import os
 import cv2 as cv
+from capture_image.gpio_controller import raspi_io
 
-
-def capture_frame(source):
+async def capture_frame(source):
+    raspi_io.__init__()
+    raspi_io.flash_on()
     if source:
         file_name = "Sources/source_image.jpg"
     else:
         file_name = "captured_image.jpg"
     ffmpeg_cmd = [
-        "rpicam-still",
-        "-t",
+        "libcamera-still",
+        "--timeout",
         "1000",
         "--width",
-        "1536",
+        "1000",
         "--height",
-        "864",
-        "--autofocus-mode",
-        "auto",
-        "--autofocus-range",
-        "full",
-        "--autofocus-speed",
-        "fast",
+        "1000",
+        # "--autofocus-mode",
+        # "auto",
+        # "--autofocus-range",
+        # "full",
+        # "--autofocus-speed",
+        # "fast",
         # "--autofocus-window","0.2,0.2,0.8,0.8",
-        "--shutter",
-        "3000",
-        "--sharpness",
-        "15",
-        "--contrast",
-        "1",
-        "--brightness",
-        "0.2",
+        # "--shutter",
+        # "3000",
+        # "--sharpness",
+        # "15",
+        # "--contrast",
+        # "1",
+        # "--brightness",
+        # "0.2",
         # "--hdr","sensor",
-        "--autofocus-on-capture",
-        "1",
-        "--denoise",
-        "cdn_hq",
+        # "--autofocus-on-capture",
+        # "1",
         "-o",
         file_name
-        # "--roi", "0.1,0.5,11"
     ]
     subprocess.run(ffmpeg_cmd)
-
+    raspi_io.flash_off()
+    raspi_io.cleanup()
 
 def take_picture_ocr():
     ffmpeg_cmd = [
-        "rpicam-still",
-        " -t",
+        "libcamera-still",
+        "--timeout",
         "0",
         "--vflip",
         "1",
@@ -69,14 +69,14 @@ def take_picture_ocr():
         "--brightness",
         "-0.1",
         # "--immediate","1",
-        "--hdr",
-        "sensor",
+        # "--hdr",
+        # "sensor",
         # "--autofocus-on-capture","1",
         "--denoise",
         "off",
-        "-o",
+        "--o",
         "ocr.jpg",
-        "-q",
+        "--quality",
         "1000",
         "--roi",
         "0.4,0.4,0.5,0.5",
@@ -86,8 +86,8 @@ def take_picture_ocr():
 
 def take_live_ocr():
     ffmpeg_cmd = [
-        "rpicam-vid",
-        " -t",
+        "libcamera-still",
+        "--timeout",
         "0",
         # "--lens-position","5",
         "--autofocus-mode",
@@ -105,13 +105,13 @@ def take_live_ocr():
         # "--contrast", "1",
         # "--brightness", "0.5",
         # "--immediate","1",
-        "--hdr",
-        "sensor",
+        # "--hdr",
+        # "sensor",
         "--autofocus-on-capture",
         "1",
         "--denoise",
         "cdn_hq",
-        "-o",
+        "--o",
         "ocr.jpg",
         # "-q","1000"
         "--roi",
@@ -130,6 +130,9 @@ def take_picture(image_name):
             cv.imwrite(filename='captured_image.jpg', img=img)
 
             break
+
+
+#capture_frame(False)
 
     # cvlc v4l2:///dev/video0 :v4l2-standard= :live-caching=300 :sout='#transcode{vcodec=h264,acodec=none}:rtp{sdp=rtsp://:8554/}' :sout-keep
 
