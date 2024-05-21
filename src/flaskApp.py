@@ -1,5 +1,6 @@
 import subprocess
 import asyncio
+import aiohttp
 from flask_cors import CORS
 from flask import Flask, render_template,request
 from menu import menu,take_sample,TakeCoordinates
@@ -41,6 +42,20 @@ def main():
     except KeyboardInterrupt as e:
         print("out")
 
+async def call_visual_inspection():
+    async with aiohttp.ClientSession() as session:
+        async with session.get('http://localhost:5000/visualInspection') as response:
+            if response.status == 200:
+                result = await response.text()
+                # print("Response from visualInspection:", result)
+                return result
+            else:
+                print(f"Failed to call visualInspection: {response.status}")
+                return f"Failed to call visualInspection: {response.status}"
+@app.route('/callVisualInspection')
+async def call_visual_inspection_route():
+    result = await call_visual_inspection()
+    return result
 # if __name__ == '__main__':
     # app.run(debug=True, host='0.0.0.0')
 main()

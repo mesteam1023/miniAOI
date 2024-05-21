@@ -422,14 +422,14 @@ async def compare_color_and_save_mask(image, source, roi, threshold=60):
     return color_difference > threshold, roi
 
 
-async def calculate_async(area):    
+async def calculate_async(checking_type, item,angle,threshold):    
     global image, source_image
     global final_result_image
     final_result_image = final_result_image
     final_result = []
     return_image = image.copy()
     return_source_image = source_image.copy()
-    checking_type, item,angle,threshold = area 
+    # checking_type, item,angle,threshold = area 
     from datetime import datetime  
     print(str(item) + str(datetime.now()))
     result = False
@@ -1017,7 +1017,7 @@ def read_text_from_image(image99 , angle,threshold):
     # Open the image file
     imageR = Image.open('Results/grayScale.jpg')
     # custom_config = r'--oem 1 --psm 6 -l friwo-ocr -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    custom_config = r'--oem 1 --psm 6 -l eng -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    custom_config = r'--oem 1 --psm 11 -l eng -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
     # Rotate the image by 90 degrees counter-clockwise
     rotated_image = imageR.rotate(angle)
     # Set the path to the Tesseract executable (this is usually not necessary on Linux, but shown here for completeness)
