@@ -17,6 +17,27 @@ from Scan_Barcode import detectBarcode
 from Template_Matching import template_check
 import matplotlib.pyplot as plt
 
+global image
+global source_image
+global final_result_image
+global final_result
+global final_data
+global spell
+global content_text
+global contents
+global count
+count = 0
+
+image = None  # Assign a default value to image
+source_image = None
+final_result_image = None
+# final_result = []
+final_data = []
+spell = None
+image = None  # Assign a default value to image
+content_text = None
+contents = None
+
 async def read_out_locations_need_to_be_checked(coordinate_file_path):
     areas = []
     with open(coordinate_file_path, "r") as file:
@@ -421,15 +442,13 @@ async def compare_color_and_save_mask(image, source, roi, threshold=60):
 
     return color_difference > threshold, roi
 
-
-async def calculate_async(checking_type, item,angle,threshold):    
-    global image, source_image
-    global final_result_image
-    final_result_image = final_result_image
-    final_result = []
-    return_image = image.copy()
-    return_source_image = source_image.copy()
-    # checking_type, item,angle,threshold = area 
+# global final_result
+async def calculate_async(area, return_image, return_source_image):  
+    global final_result
+    final_result=[]
+    # return_image = image
+    # return_source_image = source_image
+    checking_type, item,angle,threshold = area 
     from datetime import datetime  
     print(str(item) + str(datetime.now()))
     result = False
@@ -441,7 +460,7 @@ async def calculate_async(checking_type, item,angle,threshold):
     # source_bottom_right_y: int = int(item.strip().split(',')[3]+5)
 
     # Set the desired percentage of resizing
-    scale_percent = 70  # Adjust this value to the desired percentage
+    scale_percent = 20  # Adjust this value to the desired percentage
 
     # Calculate the new dimensions based on the percentage
     width = int(source_image.shape[1] * scale_percent / 100)
@@ -450,30 +469,30 @@ async def calculate_async(checking_type, item,angle,threshold):
     offset = 0
     source_top_left = (max(0, top_left[0] - offset), max(0, top_left[1] - offset))
     source_bottom_right = (
-        min(image.shape[1], bottom_right[0] + offset),
-        min(image.shape[0], bottom_right[1] + offset),
+        min(return_image.shape[1], bottom_right[0] + offset),
+        min(return_image.shape[0], bottom_right[1] + offset),
     )
     # hsv_partial_image = load_partial_image(hsv_image, top_left, bottom_right)
     # hsv_partial_path = 'Sources/hsv_partial_image.jpg'
     # # cv.imshow(hsv_partial_path, hsv_partial_image)
-    partial_image = await load_partial_image(image, top_left, bottom_right)
+    partial_image = await load_partial_image(return_image, top_left, bottom_right)
 
-    partial_path = "Sources/partial_image.jpg"
+    partial_path = f"Sources/partial_image_{item}.jpg"
     cv.imwrite(partial_path,partial_image)
     # if partial_image is not None:
     # # cv.imshow(partial_path, partial_image)
     # # cv.imshow(partial_image)
     partial_source_image = await load_partial_image(
-        source_image, top_left, bottom_right
+        return_source_image, top_left, bottom_right
     )
-    partial_source_path = "Sources/partial_source_image.jpg"
+    partial_source_path = f"Sources/partial_source_image_{item}.jpg"
     cv.imwrite(partial_source_path,partial_source_image)
     # # cv.imshow(partial_source_path, partial_source_image)
     # # cv.imshow(partial_source_image)
     partial_area_image = await load_partial_image(
-        image, source_top_left, source_bottom_right
+        return_image, source_top_left, source_bottom_right
     )
-    partial_area_path = "Sources/partial_area_image.jpg"
+    # partial_area_path = "Sources/partial_area_image.jpg"
     # # cv.imshow(partial_area_path, partial_area_image)
     # # cv.imshow(partial_area_image)
 
@@ -567,14 +586,14 @@ async def calculate_async(checking_type, item,angle,threshold):
         resized_source_image = cv.resize(return_source_image, (width, height))
         resized_image = cv.resize(return_image, (width, height))
       
-        final_result_image = await add_unicode_text_to_image(
-            final_result_image,
-            str(checking_content),
-            position=bottom_right,
-            font_path="Fonts/TitilliumWeb-Italic.ttf",
-            font_size=40,
-            text_color=(0, 0, 255),
-        )
+        # final_result_image = await add_unicode_text_to_image(
+        #     final_result_image,
+        #     str(checking_content),
+        #     position=bottom_right,
+        #     font_path="Fonts/TitilliumWeb-Italic.ttf",
+        #     font_size=40,
+        #     text_color=(0, 0, 255),
+        # )
     elif checking_type == "sc":
         result = True
         final_color = (0, 255, 0)        
@@ -597,19 +616,19 @@ async def calculate_async(checking_type, item,angle,threshold):
         cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
         resized_source_image = cv.resize(return_source_image, (width, height))
         resized_image = cv.resize(return_image, (width, height))        
-        final_result_image = await add_unicode_text_to_image(
-            final_result_image,
-            str(checking_content),
-            position=bottom_right,
-            font_path="Fonts/TitilliumWeb-Italic.ttf",
-            font_size=40,
-            text_color=(0, 0, 255),
-        )
+        # final_result_image = await add_unicode_text_to_image(
+        #     final_result_image,
+        #     str(checking_content),
+        #     position=bottom_right,
+        #     font_path="Fonts/TitilliumWeb-Italic.ttf",
+        #     font_size=40,
+        #     text_color=(0, 0, 255),
+        # )
     _, encoded_image = cv.imencode(".jpg", resized_image)
     _, sample_encoded_image = cv.imencode(".jpg", resized_source_image)
     image_bytes = encoded_image.tobytes()
     sample_image_bytes = sample_encoded_image.tobytes()
-   
+    print("End at: "+str(item) + str(datetime.now()))
 
     tmp = {
         "topLeft": f"{item[0][0]},{item[0][1]}",
@@ -892,26 +911,7 @@ async def find_best_ocr_result(ocr_results):
     return best_result
 
 
-global image
-global source_image
-global final_result_image
-global final_result
-global final_data
-global spell
-global content_text
-global contents
-global count
-count = 0
 
-image = None  # Assign a default value to image
-source_image = None
-final_result_image = None
-final_result = []
-final_data = []
-spell = None
-image = None  # Assign a default value to image
-content_text = None
-contents = None
 #subprocess.run("python3 ~/test_joint.py")
 #take_picture("captured_image.jpg")
 
@@ -931,12 +931,14 @@ contents = None
 
 
 async def process_visual():
+    global image, source_image
     final_data = []
     checking_areas = await read_out_locations_need_to_be_checked(COORDINATE_FILE_PATH)
     #tasks = [aoi(area) for area in filter(lambda x: x[0] == "dc", checking_areas)]
-
+    image = cv.imread(IMAGE_PATH)
+    source_image = cv.imread(SOURCE_PATH)
     #ocr_array = asyncio.gather(*tasks)
-    main_tasks = [calculate_async(area) for area in checking_areas]
+    main_tasks = [calculate_async(area, image, source_image) for area in checking_areas]
  
     finish = await asyncio.gather(*main_tasks)
     # finish = await asyncio.gather(result)
@@ -1017,7 +1019,7 @@ def read_text_from_image(image99 , angle,threshold):
     # Open the image file
     imageR = Image.open('Results/grayScale.jpg')
     # custom_config = r'--oem 1 --psm 6 -l friwo-ocr -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    custom_config = r'--oem 1 --psm 11 -l eng -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    custom_config = r'--oem 1 --psm 6 -l eng -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
     # Rotate the image by 90 degrees counter-clockwise
     rotated_image = imageR.rotate(angle)
     # Set the path to the Tesseract executable (this is usually not necessary on Linux, but shown here for completeness)
@@ -1213,6 +1215,31 @@ def display(im_path):
 
     plt.savefig()
  
+ # Step 2: Define the asynchronous function
+async def print_numbers_async(name, count,area, image, source_image):
+    global final_result_image
+    image = image
+   
+    final_result_image = final_result_image
+    final_result = []
+    return_image = image.copy()
+    return_source_image = source_image.copy()
+    checking_type, item,angle,threshold = area 
+    from datetime import datetime  
+    print(str(item) + str(datetime.now()))
+    result = False
+    checking_content = ""
+    top_left, bottom_right = item
+    checking_type, item,angle,threshold = area 
+    from datetime import datetime  
+    print('Strart: '+str(item) + str(datetime.now()))
+    if checking_type == 'o':
+        await asyncio.sleep(3)  # Simulate a non-blocking delay
+    elif checking_type =='sc':
+        await asyncio.sleep(2)  # Simulate a non-blocking delay
+    elif checking_type =='c':
+        await asyncio.sleep(1)  # Simulate a non-blocking delay
+    print('End: '+str(item) + str(datetime.now()))
 
 if __name__ == '__main__':
     asyncio.run(async_checking())
