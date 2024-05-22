@@ -17,27 +17,6 @@ from Scan_Barcode import detectBarcode
 from Template_Matching import template_check
 import matplotlib.pyplot as plt
 
-global image
-global source_image
-global final_result_image
-global final_result
-global final_data
-global spell
-global content_text
-global contents
-global count
-count = 0
-
-image = None  # Assign a default value to image
-source_image = None
-final_result_image = None
-# final_result = []
-final_data = []
-spell = None
-image = None  # Assign a default value to image
-content_text = None
-contents = None
-
 async def read_out_locations_need_to_be_checked(coordinate_file_path):
     areas = []
     with open(coordinate_file_path, "r") as file:
@@ -377,8 +356,8 @@ def add_special_words_to_dictionary():
     return spell
 
 
-async def load_partial_image(image, top_left, bottom_right):
-    return image[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]]
+async def load_partial_image(temp_image, top_left, bottom_right):
+    return temp_image[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]]
 
 
 async def calculate_average_color(image):
@@ -442,10 +421,9 @@ async def compare_color_and_save_mask(image, source, roi, threshold=60):
 
     return color_difference > threshold, roi
 
-# global final_result
+
 async def calculate_async(area, return_image, return_source_image):  
-    global final_result
-    final_result=[]
+    final_result = []
     # return_image = image
     # return_source_image = source_image
     checking_type, item,angle,threshold = area 
@@ -911,7 +889,26 @@ async def find_best_ocr_result(ocr_results):
     return best_result
 
 
+global image
+global source_image
+global final_result_image
+global final_result
+global final_data
+global spell
+global content_text
+global contents
+global count
+count = 0
 
+image = None  # Assign a default value to image
+source_image = None
+final_result_image = None
+final_result = []
+final_data = []
+spell = None
+image = None  # Assign a default value to image
+content_text = None
+contents = None
 #subprocess.run("python3 ~/test_joint.py")
 #take_picture("captured_image.jpg")
 
