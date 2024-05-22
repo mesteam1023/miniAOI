@@ -19,5 +19,5 @@ requests==2.31.0
 RPi.GPIO==0.7.1
 typing-extensions==4.10.0
 urllib3==2.2.1
-werkzeug==3.0.1
+werkzeug==3.0.3
 zipp==3.17.0
