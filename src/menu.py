@@ -30,6 +30,10 @@ def menu(name):
     # print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
     if name == 1:
         capture_frame(False)
+        import matplotlib.pyplot as plt
+        img = cv2.imread('Source/source_image.jpg')
+        imgplot = plt.imshow(img)
+        plt.show()
         areas = []
         with open(file_path, 'r') as file:
             for line in file:
@@ -166,13 +170,14 @@ async def TakeCoordinates(part_No):
 
             # Decode the Base64 string, making sure to remove the "data:image/jpeg;base64," part
     image_data = base64.b64decode(base64str)
-    #Vincent test
+    
     #         # Convert to a PIL image
     image = Image.open(BytesIO(image_data))
 
     #         # Save the image to a file
     image.save('Sources/source_image.jpg')
     sampleImage = cv2.imread('Sources/source_image.jpg')
+    #Vincent test
     areas = select('Sources/source_image.jpg')
 
             # with open(file_path, 'w') as file:
@@ -180,7 +185,7 @@ async def TakeCoordinates(part_No):
                     # file.write(f'{item[0][0]},{item[0][1]},{item[1][0]},{item[1][1]}\n')
         topLeft = f'{item[0][0]},{item[0][1]}'
         bottomRight = f'{item[1][0]},{item[1][1]}'
-        coordinates = Coordinates(0,partNo,"1",str(id),topLeft,bottomRight)            
+        coordinates = Coordinates(0,partNo,"1",str(id),topLeft,bottomRight,0,110)            
         url = "http://10.100.10.83:5000/api/VisualIspection/QD/InsertCoordinates"
                 
 
@@ -202,6 +207,8 @@ async def TakeCoordinates(part_No):
             #     response.content
             # )
     result_list1 = json.loads(response1.content)
+    with open("ocr_Sample.txt", 'w') as file:
+        pass  # This line is optional; it's just to keep the with statement valid
     with open(file_path, 'w') as file:
         for item in result_list1:
             topLeft = item['topLeft']
@@ -227,7 +234,10 @@ async def TakeCoordinates(part_No):
 
 async def take_sample():
     await capture_frame(True)
-
+    import matplotlib.pyplot as plt
+    img = Image.open('Sources/source_image.jpg')
+    imgplot = plt.imshow(img)
+    plt.show()
     url = "http://10.100.10.83:5000/api/VisualIspection/QD/InputSample"
             # url = "https://my-json-server.typicode.com/JasonNguyen1205/GitRepo/sample"
     source_path = 'Sources/source_image.jpg'
@@ -261,7 +271,7 @@ async def take_sample():
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
 DICTIONARY_FILE = "dictionary.txt"
 OCR_FILE = "ocr.txt"
-def read_text_from_image(image99):
+def read_text_from_image(image99):    
     angle_final = -1
     # Load the image
     # image99 = cv.imread(path)
@@ -270,8 +280,7 @@ def read_text_from_image(image99):
     # Convert to grayscale
     gray = cv2.cvtColor(image99, cv2.COLOR_BGR2GRAY)
     cv2.imwrite('Results/grayScale.jpg',gray)
-    # Perform OCR on the thresholded image with character whitelisting
-    custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
     dictionary_text = read_txt_file(DICTIONARY_FILE)
     sample_text = read_txt_file(OCR_FILE)
     # Split the dictionary text into words
@@ -292,15 +301,22 @@ def read_text_from_image(image99):
         rotated_image.save(f"Rotate/rotated_image_{angle}.jpg")
 
         img_rotate = cv2.imread(f"Rotate/rotated_image_{angle}.jpg")
+        
         gray = cv2.cvtColor(img_rotate, cv2.COLOR_BGR2GRAY)
-        # Apply adaptive thresholding
-        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+
+        cv2.imwrite('Results/sample.jpg',gray)        
+        # Apply thresholding to the edge difference image
+        threshold_value = 110  # Adjust this value as needed
+        ret, thresholded = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY_INV)
+        cv2.imwrite('Results/threshold_sample.jpg',thresholded)
         # Perform OCR on the thresholded image
-        temp_text = pytesseract.image_to_string(Image.fromarray(gray), lang="eng", timeout=10) 
+        temp_text = pytesseract.image_to_string(thresholded,nice = 10) 
 
         # if len(temp_text) > len(text):
-        #     text = temp_text.strip(' \n\x0c')
-
+        #     text = temp_text.strip(' \n\x0c')        
+        with open("ocr_Sample.txt",'a') as file:
+            file.write(temp_text)
         print(f'{temp_text}')
          # Split the long string into words
         long_string_words = temp_text.strip(' \n\x0c').split()      
@@ -312,6 +328,9 @@ def read_text_from_image(image99):
                     # If found, add it to the matched parts list
                     matched_parts.append(word)
             text = ' '.join(matched_parts)
+            if text is None:
+                if len(temp_text) > len(text):
+                    text = temp_text.strip(' \n\x0c')
             if text in sample_words:
                 angle_final = angle
                 break

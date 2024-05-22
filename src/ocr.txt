@@ -37,3 +37,15 @@ Input AC 100-240V
 STEP POWER
 Output DC 24V 4.2A
 Coated
+FlachsmarktstraGe 8
+32825 Blomberg, Germany
+STEP-PS/1AC/2400/4.2/CO
+Order-No,: 1483707
+Read manual No.1635143
+before connecting to mains
+www.phoenixcontact.com
+Made in Vietnam
+05/2024
+SC 30
+SD30
+27048001

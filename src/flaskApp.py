@@ -5,6 +5,7 @@ from flask import Flask, render_template,request
 from menu import menu,take_sample,TakeCoordinates
 from async_checking import async_checking
 
+
 app = Flask(__name__)
 CORS(app)
 
@@ -31,12 +32,12 @@ async def takeSample():
 
 @app.route('/visualInspection')
 async def visualInspection():          
-    result = await async_checking()
-    return result
+    result = async_checking()
+    return await asyncio.create_task(result)
 
 def main():
     try:
-        app.run(debug=True, host='0.0.0.0')
+       app.run(debug = True, host='0.0.0.0')
     except KeyboardInterrupt as e:
         print("out")
 
