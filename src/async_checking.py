@@ -968,6 +968,7 @@ async def async_checking():
     final_data_list = await process_visual()
     visual_data_json = json.dumps(final_data_list)
     cv.imwrite("Results/result.jpg", final_result_image)
+    cv.imwrite("result.jpg", final_result_image)
     # display('Results/result.jpg')
    
     return visual_data_json
