@@ -3,30 +3,34 @@ import glob
 from dbr import *
 import requests
 import base64
+import aiohttp
+import asyncio
 import re
 
 async def detectBarcode(path):
     substring_to_remove  = r"{GS}"
-    new_string =""
+    new_string = ""
+
     try:
         api_url = 'http://10.100.27.165:5000/api/detectbarcode'
-        params = {'image':f'{path}'}
-        response = requests.post(url=api_url, json=params)
-
-        if response is not None:
-            if response.status_code == 200:
-                gets = response.json()
-                for item in gets:
-                    if substring_to_remove in  item:
-                        # Remove the substring using regex
-                        new_string = item.replace(substring_to_remove, "")
+        params = {'image': f'{path}'}
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url=api_url, json=params) as response:
+                if response is not None:
+                    if response.status == 200:
+                        gets = await response.json()
+                        for item in gets:
+                            if substring_to_remove in item:
+                                # Remove the substring using regex
+                                new_string = re.sub(substring_to_remove, "", item)
+                            else:
+                                new_string = item
                     else:
-                        new_string = item
-            else:
-                print(f"{response.status_code}")
-                print(f"{response.reason}")
-        else:
-            print("Response none")
+                        print(f"{response.status}")
+                        print(f"{response.reason}")
+                else:
+                    print("Response none")
     except Exception as e:
         print(e)
         gets = None

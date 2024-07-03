@@ -43,11 +43,11 @@ async def main():
     temp=[]
     for area in checking_areas:
         temp.append([area,temp_image.copy(), temp_source_image.copy()])
-    # main_tasks = [asyncio.create_task(calculate_async(area, temp_image, temp_source_image)) for area, temp_image, temp_source_image in temp]
-    main_tasks = [asyncio.create_task(print_numbers(area, temp_image, temp_source_image)) for area, temp_image, temp_source_image in temp]
+    main_tasks = [asyncio.create_task(calculate_async(area, temp_image, temp_source_image)) for area, temp_image, temp_source_image in temp]
+    #main_tasks = [asyncio.create_task(print_numbers(area, temp_image, temp_source_image)) for area, temp_image, temp_source_image in temp]
     # Wait for all tasks to complete
     await asyncio.gather(*main_tasks)
-    
+
 
 async def visual_test():
     checking_areas = await read_out_locations_need_to_be_checked(COORDINATE_FILE_PATH)

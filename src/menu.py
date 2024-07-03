@@ -211,6 +211,7 @@ async def TakeCoordinates(part_No):
         pass  # This line is optional; it's just to keep the with statement valid
     with open(file_path, 'w') as file:
         for item in result_list1:
+            file.write('\n')
             topLeft = item['topLeft']
             bottomRight = item['bottomRight']
             top_left_x: int = int(topLeft.strip().split(",")[0])
@@ -230,14 +231,14 @@ async def TakeCoordinates(part_No):
                 checkType ="c"
             else:
                 checkType ="s"
-            file.write(f'{checkType},{topLeft},{bottomRight},{angle}\n')
+            file.write(f'{checkType},{topLeft},{bottomRight},{angle}')
 
 async def take_sample():
     await capture_frame(True)
     import matplotlib.pyplot as plt
     img = Image.open('Sources/source_image.jpg')
-    imgplot = plt.imshow(img)
-    plt.show()
+    # imgplot = plt.imshow(img)
+    # plt.show()
     url = "http://10.100.10.83:5000/api/VisualIspection/QD/InputSample"
             # url = "https://my-json-server.typicode.com/JasonNguyen1205/GitRepo/sample"
     source_path = 'Sources/source_image.jpg'

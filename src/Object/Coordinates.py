@@ -1,13 +1,13 @@
 import json
 class Coordinates:
-    def __init__(self, id,partNo,typeID,sampleID,topLeft,bottomRight,angle,threshold):
+    def __init__(self, id,partNo,typeID,sampleID,topLeft,bottomRight,rotate,threshold):
         self.id = id
         self.partNo = partNo
         self.typeID = typeID
         self.sampleID = sampleID
         self.topLeft = topLeft
         self.bottomRight = bottomRight
-        self.angle = angle
+        self.rotate = rotate
         self.threshold = threshold
     
 # Custom serialization function for the Coordinates class
@@ -20,8 +20,8 @@ def serialize_coordinates(obj):
             "sampleID": obj.sampleID,
             "topLeft": obj.topLeft,
             "bottomRight": obj.bottomRight,
-            "threshold": obj.threshold,
-            "angle":obj.angle
+            "rotate": obj.rotate,
+            "threshold":obj.threshold
         }
     elif isinstance(obj, set):
         return list(obj)

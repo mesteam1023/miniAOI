@@ -5,7 +5,8 @@ from flask_cors import CORS
 from flask import Flask, render_template,request
 from menu import menu,take_sample,TakeCoordinates
 from async_checking import async_checking
-
+from load_img import GRBLApp
+import tkinter as tk
 
 app = Flask(__name__)
 CORS(app)
@@ -16,19 +17,31 @@ def home():
     return 'Hello World'
 
 @app.route('/test')
-def test():
-    try:
-        # Replace 'your_command_here' with the actual command you want to run
-        result = subprocess.check_output(['python3','main.py','0'], shell=True, stderr=subprocess.STDOUT)
-        return f"Command executed successfully: {result.decode('utf-8')}"
-    except subprocess.CalledProcessError as e:
-        return f"Error executing command: {e.output.decode('utf-8')}"
+async def test():
+    await take_sample()
+
+    await grbl_ui()
+    # try:        
+    #     # Replace 'your_command_here' with the actual command you want to run
+    #     result = subprocess.check_output(['python3','main.py','0'], shell=True, stderr=subprocess.STDOUT)
+    #     return f"Command executed successfully: {result.decode('utf-8')}"
+    # except subprocess.CalledProcessError as e:
+    #     return f"Error executing command: {e.output.decode('utf-8')}"
+    return 'Finish!'
+
+async def grbl_ui():
+    root = tk.Tk()
+    app = GRBLApp(root)  # Await the async constructor    
+    await app.setup()
+    root.mainloop()
 
 @app.route('/takeSample')
 async def takeSample():
-    partNo = request.args.get('partNo')
-    await take_sample()
-    await TakeCoordinates(partNo)
+    # partNo = request.args.get('partNo')
+    # await take_sample()
+    # await TakeCoordinates(partNo)
+    # await take_sample()
+    await grbl_ui()
     return 'Finish!'
 
 @app.route('/visualInspection')

@@ -5,7 +5,7 @@ import random
 import subprocess
 import cv2 as cv
 import numpy as np
-import pytesseract
+from pytesseract import image_to_string
 import time
 from PIL import Image, ImageFont, ImageDraw
 from spellchecker import SpellChecker
@@ -43,123 +43,123 @@ async def load_image(image_path):
     return img, source
 
 
-async def tranform_image(image_path, image=None, alpha=1.5, beta=-50.0, rotate=0):
-    global resized
+# async def tranform_image(image_path, image=None, alpha=1.5, beta=-50.0, rotate=0):
+#     global resized
 
-    # Load the image
-    if image is None:
-        pil_img = Image.open(image_path)
-        rotated_img = pil_img.rotate(rotate, expand=True)
-        image = np.array(rotated_img)
-    else:
-        pil_img = Image.fromarray(np.array(image))
-        rotated_img = pil_img.rotate(rotate, expand=True)
-        image = np.array(rotated_img)
+#     # Load the image
+#     if image is None:
+#         pil_img = Image.open(image_path)
+#         rotated_img = pil_img.rotate(rotate, expand=True)
+#         image = np.array(rotated_img)
+#     else:
+#         pil_img = Image.fromarray(np.array(image))
+#         rotated_img = pil_img.rotate(rotate, expand=True)
+#         image = np.array(rotated_img)
 
-        # Median Blur
-    median_blur = cv.medianBlur(image, 1)
+#         # Median Blur
+#     median_blur = cv.medianBlur(image, 1)
 
-    try:
-        gray_image = cv.cvtColor(median_blur, cv.COLOR_BGR2GRAY)
-    except Exception as e:
-        print(e)
-        gray_image = image
-    # Apply edge detection (using Canny edge detector as an example)
+#     try:
+#         gray_image = cv.cvtColor(median_blur, cv.COLOR_BGR2GRAY)
+#     except Exception as e:
+#         print(e)
+#         gray_image = image
+#     # Apply edge detection (using Canny edge detector as an example)
 
-    sharpened = sharpen_image(gray_image)
+#     sharpened = sharpen_image(gray_image)
 
-    adjusted = cv.convertScaleAbs(sharpened, alpha=3, beta=100)
+#     adjusted = cv.convertScaleAbs(sharpened, alpha=3, beta=100)
 
-    # adjusted = gray_image
-    _, thresh = cv.threshold(adjusted, 150, 255, cv.THRESH_BINARY_INV)
+#     # adjusted = gray_image
+#     _, thresh = cv.threshold(adjusted, 150, 255, cv.THRESH_BINARY_INV)
 
-    if thresh.shape[0] > thresh.shape[1] and thresh.shape[1] < 300:
-        zoom = (300 / thresh.shape[1]) + 1
-        resized = cv.resize(
-            thresh,
-            (int(adjusted.shape[1] * zoom), int(thresh.shape[0] * zoom)),
-            interpolation=cv.INTER_LINEAR_EXACT,
-        )
+#     if thresh.shape[0] > thresh.shape[1] and thresh.shape[1] < 300:
+#         zoom = (300 / thresh.shape[1]) + 1
+#         resized = cv.resize(
+#             thresh,
+#             (int(adjusted.shape[1] * zoom), int(thresh.shape[0] * zoom)),
+#             interpolation=cv.INTER_LINEAR_EXACT,
+#         )
 
-    if thresh.shape[1] > thresh.shape[0] and thresh.shape[0] < 300:
-        zoom = (300 / adjusted.shape[0]) + 1
-        resized = cv.resize(
-            thresh,
-            (int(adjusted.shape[1] * zoom), int(thresh.shape[0] * zoom)),
-            interpolation=cv.INTER_LINEAR_EXACT,
-        )
+#     if thresh.shape[1] > thresh.shape[0] and thresh.shape[0] < 300:
+#         zoom = (300 / adjusted.shape[0]) + 1
+#         resized = cv.resize(
+#             thresh,
+#             (int(adjusted.shape[1] * zoom), int(thresh.shape[0] * zoom)),
+#             interpolation=cv.INTER_LINEAR_EXACT,
+#         )
 
-    # Gaussian Blur
-    # gaussian_blur = cv.GaussianBlur(resized, (1, 1), 0)
+#     # Gaussian Blur
+#     # gaussian_blur = cv.GaussianBlur(resized, (1, 1), 0)
 
-    # # Median Blur
-    # median_blur = cv.medianBlur(resized, 5)
+#     # # Median Blur
+#     # median_blur = cv.medianBlur(resized, 5)
 
-    # sharpened = sharpen_image(median_blur)
+#     # sharpened = sharpen_image(median_blur)
 
-    # Display the original and processed images
-    # # cv.imshow('Original Image', adjusted)
-    # cv.waitKey(0)
-    # # cv.imshow('Grayscale Image', gray_image)
-    # cv.waitKey(0)
-    # # cv.imshow('Edge Detection', sharpened)
-    # cv.waitKey(0)
-    # # cv.imshow('Threshold', thresh)
-    # cv.waitKey(0)
-    # # cv.imshow('Resized', resized)
-    # cv.waitKey(0)
-    # # cv.imshow('Gaussian Blur', gaussian_blur)
-    # cv.waitKey(0)
-    # # cv.imshow('Median Blur', median_blur)
+#     # Display the original and processed images
+#     # # cv.imshow('Original Image', adjusted)
+#     # cv.waitKey(0)
+#     # # cv.imshow('Grayscale Image', gray_image)
+#     # cv.waitKey(0)
+#     # # cv.imshow('Edge Detection', sharpened)
+#     # cv.waitKey(0)
+#     # # cv.imshow('Threshold', thresh)
+#     # cv.waitKey(0)
+#     # # cv.imshow('Resized', resized)
+#     # cv.waitKey(0)
+#     # # cv.imshow('Gaussian Blur', gaussian_blur)
+#     # cv.waitKey(0)
+#     # # cv.imshow('Median Blur', median_blur)
 
-    # Wait for a key press and then close all windows
-    # cv.destroyAllWindows()
-    return median_blur, sharpened, gray_image
-
-
-async def sharpen_image(image):
-    kernel = np.array([[-1, -1, -1], [-1, 255, -1], [-1, -1, -1]])
-    sharpened = cv.filter2D(image, -1, kernel)
-    return sharpened
+#     # Wait for a key press and then close all windows
+#     # cv.destroyAllWindows()
+#     return median_blur, sharpened, gray_image
 
 
-async def correct_color(image):
-    try:
-        hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
-    except Exception as e:
-        hsv = cv.cvtColor(cv.cvtColor(image, cv.COLOR_GRAY2BGR), cv.COLOR_BGR2HSV)
-
-    h, s, v = cv.split(hsv)
-
-    # Adjust the saturation and value channels
-    h = cv.equalizeHist(h)
-    s = cv.equalizeHist(s)
-    v = cv.equalizeHist(v)
-
-    enhanced_hsv = cv.merge([h, s, v])
-    return cv.cvtColor(enhanced_hsv, cv.COLOR_HSV2BGR)
+# async def sharpen_image(image):
+#     kernel = np.array([[-1, -1, -1], [-1, 255, -1], [-1, -1, -1]])
+#     sharpened = cv.filter2D(image, -1, kernel)
+#     return sharpened
 
 
-async def insert_image_into_white_base(image1, position, width=400, height=400):
-    # Create a blank 300x300 black image
+# async def correct_color(image):
+#     try:
+#         hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
+#     except Exception as e:
+#         hsv = cv.cvtColor(cv.cvtColor(image, cv.COLOR_GRAY2BGR), cv.COLOR_BGR2HSV)
 
-    base_image = np.zeros((width, height, 3), dtype="uint8")
-    base_image[:] = (255, 255, 255)
-    # Load another image (replace with the path to your image)
-    # Ensure the image to insert is smaller than 300x300
-    insert_image = image1  # Replace with the correct path
-    insert_height, insert_width = insert_image.shape[:2]
-    x_offset = 0
-    y_offset = 0
-    # Coordinates where to insert the image on the base image
-    x_offset, y_offset = position  # Example y coordinate
+#     h, s, v = cv.split(hsv)
 
-    # Insert the image
-    base_image[
-        y_offset : y_offset + insert_height, x_offset : x_offset + insert_width
-    ] = insert_image
+#     # Adjust the saturation and value channels
+#     h = cv.equalizeHist(h)
+#     s = cv.equalizeHist(s)
+#     v = cv.equalizeHist(v)
 
-    return base_image
+#     enhanced_hsv = cv.merge([h, s, v])
+#     return cv.cvtColor(enhanced_hsv, cv.COLOR_HSV2BGR)
+
+
+# async def insert_image_into_white_base(image1, position, width=400, height=400):
+#     # Create a blank 300x300 black image
+
+#     base_image = np.zeros((width, height, 3), dtype="uint8")
+#     base_image[:] = (255, 255, 255)
+#     # Load another image (replace with the path to your image)
+#     # Ensure the image to insert is smaller than 300x300
+#     insert_image = image1  # Replace with the correct path
+#     insert_height, insert_width = insert_image.shape[:2]
+#     x_offset = 0
+#     y_offset = 0
+#     # Coordinates where to insert the image on the base image
+#     x_offset, y_offset = position  # Example y coordinate
+
+#     # Insert the image
+#     base_image[
+#         y_offset : y_offset + insert_height, x_offset : x_offset + insert_width
+#     ] = insert_image
+
+#     return base_image
 
 
 IMAGE_PATH = "captured_image.jpg"
@@ -167,28 +167,28 @@ SOURCE_PATH = "Sources/source_image.jpg"
 COORDINATE_FILE_PATH = "coordinate.txt"
 
 
-async def aoi(area):
-    final_result = []
-    image, source_image = await load_image(IMAGE_PATH)
+# async def aoi(area):
+#     final_result = []
+#     image, source_image = await load_image(IMAGE_PATH)
 
-    if image is None:
-        print("Could not read input image")
-        final_result.append(False)
-        return
-    if source_image is None:
-        print("Could not read source image")
-        final_result.append(False)
-        return
-    if image.shape != source_image.shape:
-        print("Input and source images must be of the same size")
-        final_result.append(False)
-        return
+#     if image is None:
+#         print("Could not read input image")
+#         final_result.append(False)
+#         return
+#     if source_image is None:
+#         print("Could not read source image")
+#         final_result.append(False)
+#         return
+#     if image.shape != source_image.shape:
+#         print("Input and source images must be of the same size")
+#         final_result.append(False)
+#         return
 
-    ocr_result_final = await process_image(image)
-    if ocr_result_final:
-        return ocr_result_final
+#     ocr_result_final = await process_image(image)
+#     if ocr_result_final:
+#         return ocr_result_final
 
-    return None
+#     return None
 
 
 # async def process_image(image):
@@ -234,79 +234,79 @@ async def aoi(area):
 #     return None
 
 
-async def preprocess_image(image):
-    img_ocr = cv.imread(f"rotated_image.jpg")
-    shape = img_ocr.shape[:2]
-    h, w = shape
-    print(w, h)
+# async def preprocess_image(image):
+#     img_ocr = cv.imread(f"rotated_image.jpg")
+#     shape = img_ocr.shape[:2]
+#     h, w = shape
+#     print(w, h)
 
-    if w > h:
-        ratio = 300 / w
-        w = int(w * ratio)
-        h = int(h * ratio)
-    else:
-        ratio = 300 / h
-        w = int(w * ratio)
-        h = int(h * ratio)
-    img_resized = cv.resize(img_ocr, (w, h), interpolation=cv.INTER_LINEAR_EXACT)
-    img_resized = await insert_image_into_white_base(
-        img_resized, (int(150 - w / 2), int(150 - h / 2)), 300, 300
-    )
-    return img_resized
-
-
-async def adjust_image(image, thresh):
-    try:
-        gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    except Exception as e:
-        print(e)
-        gray = image
-
-    _, img_adjust = cv.threshold(gray, thresh, 255, cv.THRESH_BINARY_INV)
-
-    img_adjust = await sharpen_image(img_adjust)
-
-    return img_adjust
+#     if w > h:
+#         ratio = 300 / w
+#         w = int(w * ratio)
+#         h = int(h * ratio)
+#     else:
+#         ratio = 300 / h
+#         w = int(w * ratio)
+#         h = int(h * ratio)
+#     img_resized = cv.resize(img_ocr, (w, h), interpolation=cv.INTER_LINEAR_EXACT)
+#     img_resized = await insert_image_into_white_base(
+#         img_resized, (int(150 - w / 2), int(150 - h / 2)), 300, 300
+#     )
+#     return img_resized
 
 
-async def extract_text_from_image(image):
-    global count
-    img = None
-    markup1 = None
-    markup2 = None
-    markup3 = None
-    img = Image.fromarray(image)
-    count += 1
-    #text = pytesseract.image_to_string(img)
-    img.save(f"ocr{count}.jpg")
-    print(text)
-    if text != "" and text is not None:
-        corrected = spell.correction(text)
-        print(corrected)
-    else:
-        #markup1 = await preprocess_image(img)
-        markup2 = await adjust_image(img, 90)
-        markup3 = await correct_color(markup2)
-        # # cv.imshow(f"ocr{count}.jpg", markup3)
-        count += 1
-        text_img = Image.fromarray(markup3)
-        text = pytesseract.image_to_string(text_img)
-        corrected = spell.correction(text)
-        text_img.save(f"ocr{count}.jpg")
-        print(corrected)
+# async def adjust_image(image, thresh):
+#     try:
+#         gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+#     except Exception as e:
+#         print(e)
+#         gray = image
 
-    if corrected is not None:
-        return corrected.strip()
-    else:
-        return ""
+#     _, img_adjust = cv.threshold(gray, thresh, 255, cv.THRESH_BINARY_INV)
+
+#     img_adjust = await sharpen_image(img_adjust)
+
+#     return img_adjust
 
 
-async def find_best_ocr_result(ocr_result):
-    longest = spell.correction(ocr_result[0])
-    return longest
+# async def extract_text_from_image(image):
+#     global count
+#     img = None
+#     markup1 = None
+#     markup2 = None
+#     markup3 = None
+#     img = Image.fromarray(image)
+#     count += 1
+#     #text = pytesseract.image_to_string(img)
+#     img.save(f"ocr{count}.jpg")
+#     print(text)
+#     if text != "" and text is not None:
+#         corrected = spell.correction(text)
+#         print(corrected)
+#     else:
+#         #markup1 = await preprocess_image(img)
+#         markup2 = await adjust_image(img, 90)
+#         markup3 = await correct_color(markup2)
+#         # # cv.imshow(f"ocr{count}.jpg", markup3)
+#         count += 1
+#         text_img = Image.fromarray(markup3)
+#         # text = pytesseract.image_to_string(text_img)
+#         corrected = spell.correction(text)
+#         text_img.save(f"ocr{count}.jpg")
+#         print(corrected)
+
+#     if corrected is not None:
+#         return corrected.strip()
+#     else:
+#         return ""
 
 
-async def add_unicode_text_to_image(
+# async def find_best_ocr_result(ocr_result):
+#     longest = spell.correction(ocr_result[0])
+#     return longest
+
+
+def add_unicode_text_to_image(
     image_cv, text, position, font_path, font_size, text_color=None, bg_color=(0, 0, 0)
 ):
     # if text_color is None:
@@ -356,78 +356,89 @@ def add_special_words_to_dictionary():
     return spell
 
 
-async def load_partial_image(temp_image, top_left, bottom_right):
+def load_partial_image(temp_image, top_left, bottom_right):
     return temp_image[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]]
 
 
-async def calculate_average_color(image):
-    return np.mean(image, axis=(0, 1))
+# async def calculate_average_color(image):
+#     return np.mean(image, axis=(0, 1))
 
 
-async def compare_color_and_save_mask(image, source, roi, threshold=60):
-    if roi is None:
-        roi = ((0, 0), (image.shape[1], image.shape[0]))
-    else:
-        roi = roi
-    top_left, bottom_right = roi
-    region_width = bottom_right[0] - top_left[0]
-    region_height = bottom_right[1] - top_left[1]
-    if source is None or image is None:
-        return False,roi
-    # template_resized = cv.resize(source, (region_width, region_height))
-    try:
-        template_hsv = cv.cvtColor(source, cv.COLOR_BGR2HSV)
-    except Exception as e:
-        return False,roi
-        template_hsv = cv.cvtColor(
-            cv.cvtColor(source, cv.COLOR_GRAY2BGR), cv.COLOR_BGR2HSV
-        )
+# async def compare_color_and_save_mask(image, source, roi, threshold=60):
+#     if roi is None:
+#         roi = ((0, 0), (image.shape[1], image.shape[0]))
+#     else:
+#         roi = roi
+#     top_left, bottom_right = roi
+#     region_width = bottom_right[0] - top_left[0]
+#     region_height = bottom_right[1] - top_left[1]
+#     if source is None or image is None:
+#         return False,roi
+#     # template_resized = cv.resize(source, (region_width, region_height))
+#     try:
+#         template_hsv = cv.cvtColor(source, cv.COLOR_BGR2HSV)
+#     except Exception as e:
+#         return False,roi
+#         template_hsv = cv.cvtColor(
+#             cv.cvtColor(source, cv.COLOR_GRAY2BGR), cv.COLOR_BGR2HSV
+#         )
 
-    try:
-        image_hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
-    except Exception as e:
-        image_hsv = cv.cvtColor(cv.cvtColor(image, cv.COLOR_GRAY2BGR), cv.COLOR_BGR2HSV)
+#     try:
+#         image_hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
+#     except Exception as e:
+#         image_hsv = cv.cvtColor(cv.cvtColor(image, cv.COLOR_GRAY2BGR), cv.COLOR_BGR2HSV)
 
-    main_image_hsv = image_hsv[
-        top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]
-    ]
+#     main_image_hsv = image_hsv[
+#         top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]
+#     ]
 
-    avg_color_template = await calculate_average_color(template_hsv)
-    avg_color_main_image = await calculate_average_color(main_image_hsv)
-    diff = avg_color_main_image - avg_color_template
+#     avg_color_template = await calculate_average_color(template_hsv)
+#     avg_color_main_image = await calculate_average_color(main_image_hsv)
+#     diff = avg_color_main_image - avg_color_template
 
-    # avg_color_template = np.uint8([[avg_color_template]])
-    # avg_color_template = cv.cvtColor(avg_color_template, cv.COLOR_HSV2BGR)
-    # avg_color_main_image = np.uint8([[avg_color_main_image]])
-    # avg_color_main_image = cv.cvtColor(avg_color_main_image, cv.COLOR_HSV2BGR)
-    # color_difference = np.linalg.norm(avg_color_template - avg_color_main_image)
-    # Create a blank mask
-    color_difference = np.linalg.norm(diff)
+#     # avg_color_template = np.uint8([[avg_color_template]])
+#     # avg_color_template = cv.cvtColor(avg_color_template, cv.COLOR_HSV2BGR)
+#     # avg_color_main_image = np.uint8([[avg_color_main_image]])
+#     # avg_color_main_image = cv.cvtColor(avg_color_main_image, cv.COLOR_HSV2BGR)
+#     # color_difference = np.linalg.norm(avg_color_template - avg_color_main_image)
+#     # Create a blank mask
+#     color_difference = np.linalg.norm(diff)
 
-    mask = np.zeros(image.shape[:2], dtype="uint8")
-    result = mask.copy()
-    # If color difference is significant, fill the ROI in the mask
-    if color_difference > threshold:
-        result[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]] = 255
-        cv.rectangle(result, top_left, bottom_right, (0, 0, 255), 1)
-    else:
-        result[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]] = 0
-        cv.rectangle(result, top_left, bottom_right, (0, 255, 0), 1)
+#     mask = np.zeros(image.shape[:2], dtype="uint8")
+#     result = mask.copy()
+#     # If color difference is significant, fill the ROI in the mask
+#     if color_difference > threshold:
+#         result[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]] = 255
+#         cv.rectangle(result, top_left, bottom_right, (0, 0, 255), 1)
+#     else:
+#         result[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]] = 0
+#         cv.rectangle(result, top_left, bottom_right, (0, 255, 0), 1)
 
-    mask_path = f"Results/color_{roi}.jpg"
+#     mask_path = f"Results/color_{roi}.jpg"
 
-    # Save the mask
-    # # cv.imshow(mask_path, diff)
+#     # Save the mask
+#     # # cv.imshow(mask_path, diff)
 
-    return color_difference > threshold, roi
+#     return color_difference > threshold, roi
+def copy_source_img(source_image, current_image):
+    copy_source= source_image.copy()
+    copy_img = current_image.copy()
+    return copy_source,copy_img
 
 
-async def calculate_async(area, return_image, return_source_image):  
+async def calculate_async(area, origin_image, origin_source_image):
+    global final_result_image
     final_result = []
-    # return_image = image
-    # return_source_image = source_image
-    checking_type, item,angle,threshold = area 
-    from datetime import datetime  
+    final_result_image = final_result_image
+    loop = asyncio.get_running_loop()
+    return_source_image,return_image = await loop.run_in_executor(
+            None, 
+            lambda: copy_source_img(origin_source_image,origin_image)
+        )
+    # return_source_image= origin_image.copy()
+    # return_image = origin_source_image.copy()
+    checking_type, item,angle,threshold = area
+    from datetime import datetime
     print(str(item) + str(datetime.now()))
     result = False
     checking_content = ""
@@ -441,8 +452,8 @@ async def calculate_async(area, return_image, return_source_image):
     scale_percent = 20  # Adjust this value to the desired percentage
 
     # Calculate the new dimensions based on the percentage
-    width = int(source_image.shape[1] * scale_percent / 100)
-    height = int(source_image.shape[0] * scale_percent / 100)
+    width = int(return_source_image.shape[1] * scale_percent / 100)
+    height = int(return_source_image.shape[0] * scale_percent / 100)
 
     offset = 0
     source_top_left = (max(0, top_left[0] - offset), max(0, top_left[1] - offset))
@@ -453,21 +464,21 @@ async def calculate_async(area, return_image, return_source_image):
     # hsv_partial_image = load_partial_image(hsv_image, top_left, bottom_right)
     # hsv_partial_path = 'Sources/hsv_partial_image.jpg'
     # # cv.imshow(hsv_partial_path, hsv_partial_image)
-    partial_image = await load_partial_image(return_image, top_left, bottom_right)
+    # partial_image = load_partial_image(return_image, top_left, bottom_right)
 
-    partial_path = f"Sources/partial_image_{item}.jpg"
-    cv.imwrite(partial_path,partial_image)
+    # partial_path = f"Sources/partial_image_{item}.jpg"
+    # cv.imwrite(partial_path,partial_image)
     # if partial_image is not None:
     # # cv.imshow(partial_path, partial_image)
     # # cv.imshow(partial_image)
-    partial_source_image = await load_partial_image(
+    partial_source_image = load_partial_image(
         return_source_image, top_left, bottom_right
     )
     partial_source_path = f"Sources/partial_source_image_{item}.jpg"
-    cv.imwrite(partial_source_path,partial_source_image)
+    # cv.imwrite(partial_source_path,partial_source_image)
     # # cv.imshow(partial_source_path, partial_source_image)
     # # cv.imshow(partial_source_image)
-    partial_area_image = await load_partial_image(
+    partial_area_image = load_partial_image(
         return_image, source_top_left, source_bottom_right
     )
     # partial_area_path = "Sources/partial_area_image.jpg"
@@ -479,129 +490,104 @@ async def calculate_async(area, return_image, return_source_image):
     # partial_image = cv.GaussianBlur(partial_image, (5, 5), 0)
     # image = cv.GaussianBlur(image, (5, 5), 0)
     if checking_type == "c":
-        wrong_color, roi = await compare_color_and_save_mask(
-            image, partial_source_image, item, 70
-        )
-        top_left, bottom_right = roi
-        # diff_check = shape_check(partial_source_image,partial_area_image,threshold)
-        corlor_diff = corlor_check(partial_source_image,partial_area_image)
+       
+        corlor_diff = color_check(partial_source_image,partial_area_image,threshold)
+        # corlor_diff=1
         print(f"Color Diff: {corlor_diff}")
-        # wrong_color = is_similar(image, source_image)
-        # wrong_color, color_mask = check_wrong_color(partial_image, red_color_ranges)
-
-        # print(f"Wrong Color: {wrong_color}")
-        # if not wrong_color:
-        #     result = True
-        #     final_color = (0, 255, 0)
-        # else:
-        #     result = False
-        #     final_color = (0, 0, 255)
-        if  corlor_diff < 30000:
+        
+        if  corlor_diff < 100:
             result = True
             final_color = (0, 255, 0)
         else:
             result = False
-            final_color = (0, 0, 255)        
+            final_color = (0, 0, 255)
         final_result.append(result)
         
-        cv.rectangle(return_image, top_left, bottom_right, final_color, 3)
-        cv.rectangle(final_result_image, top_left, bottom_right, final_color, 3)
-        cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
-        # Resize the image
-        resized_source_image = cv.resize(return_source_image, (width, height))
-        resized_image = cv.resize(return_image, (width, height))
-    elif checking_type == "s":
-        # diff_check = shape_check(partial_source_image,partial_area_image,threshold)
 
-        # squared_detect = squared_error(partial_source_image,partial_area_image,threshold)
+    elif checking_type == "s":
+      
         tmp_check = await template_check(partial_source_image,partial_area_image)
-        # wrong_color = is_similar(image, source_image)
-        # wrong_color, color_mask = check_wrong_color(partial_image, red_color_ranges)
-        
-        # print(f"Wrong Color: {wrong_color}")
-        # if not wrong_color:
-        #     result = True
-        #     final_color = (0, 255, 0)
-        # else:
-        #     result = False
-        #     final_color = (0, 0, 255)
-        # if squared_detect > 0 or diff_check == 1 or tmp_check > 80:
+     
         if tmp_check > 50:
             result = True
             final_color = (0, 255, 0)
         else:
             result = False
-            final_color = (0, 0, 255)        
-        final_result.append(result)
-        cv.rectangle(return_image, top_left, bottom_right, final_color, 3)
-        cv.rectangle(final_result_image, top_left, bottom_right, final_color, 3)
-        cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
-        resized_source_image = cv.resize(return_source_image, (width, height))
-        resized_image = cv.resize(return_image, (width, height))
-      
-       
-    elif checking_type == "o":
-        diff_check = shape_check(partial_source_image,partial_area_image,threshold)
-        if diff_check == 1:
-            result = True
-            final_color = (0, 255, 0)
-            checking_content =  read_text_from_image(partial_area_image,angle,threshold)
-            if checking_content.strip(' \n\x0c') is None or checking_content.strip(' \n\x0c')  =='':
-                gray = cv.cvtColor(partial_area_image, cv.COLOR_BGR2GRAY)
-                checking_content = pytesseract.image_to_string(Image.fromarray(gray), lang="eng", timeout=10)            
-            if checking_content.strip(' \n\x0c') is None or checking_content.strip(' \n\x0c')  =='':
-                checking_content = 'OCR not success'
-                result = False
-                final_color = (0, 0, 255)
-        else:
-            checking_content = 'OCR not success'
-            result = False
             final_color = (0, 0, 255)
         final_result.append(result)
-        cv.rectangle(return_image, top_left, bottom_right, final_color, 3)
+        
+        # cv.rectangle(return_image, top_left, bottom_right, final_color, 3)    
+        # cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
+        # resized_source_image = cv.resize(return_source_image, (width, height))
+        # resized_image = cv.resize(return_image, (width, height))
+
+    elif checking_type == "o":
+        # diff_check = shape_check(partial_source_image,partial_area_image,threshold)
+        # if diff_check == 1:
+        checking_content = 'OCR not success' 
+        result = False
+        final_color = (0, 0, 255)
+        checking_content = await read_text_from_image(partial_area_image,angle,threshold)          
+        if checking_content.strip('\n\x0c') is not None or checking_content.strip(' \n\x0c')  !='':  
+        # if checking_content == '2904605':   
+            result = True
+            final_color = (0, 255, 0)
+        # else:
+        #     checking_content = 'OCR not success'
+        #     result = False
+        #     final_color = (0, 0, 255)
+        final_result.append(result)   
         cv.rectangle(final_result_image, top_left, bottom_right, final_color, 3)
-        cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
-        resized_source_image = cv.resize(return_source_image, (width, height))
-        resized_image = cv.resize(return_image, (width, height))
-      
-        # final_result_image = await add_unicode_text_to_image(
-        #     final_result_image,
-        #     str(checking_content),
-        #     position=bottom_right,
-        #     font_path="Fonts/TitilliumWeb-Italic.ttf",
-        #     font_size=40,
-        #     text_color=(0, 0, 255),
-        # )
+        final_result_image = add_unicode_text_to_image(
+            final_result_image,
+            str(checking_content),
+            position=bottom_right,
+            font_path="Fonts/TitilliumWeb-Italic.ttf",
+            font_size=40,
+            text_color=(0, 0, 255),
+        )
+        # cv.rectangle(return_image, top_left, bottom_right, final_color, 3)    
+        # cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
+        # resized_source_image = cv.resize(return_source_image, (width, height))
+        # resized_image = cv.resize(return_image, (width, height))
     elif checking_type == "sc":
         result = True
-        final_color = (0, 255, 0)        
-        gray = cv.cvtColor(partial_image, cv.COLOR_BGR2GRAY)
-        inv_gray = cv.bitwise_not(gray)
-        equalize_image = cv.equalizeHist(inv_gray)
+        final_color = (0, 255, 0)
+        gray_scale = cv.cvtColor(partial_area_image, cv.COLOR_BGR2GRAY)
+        # _,gray = cv.threshold(gray_scale, threshold, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU)
+        _,gray = cv.threshold(gray_scale, threshold, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+        # cv.imwrite(f'Results/threshold_sc_{threshold}.jpg',gray)
+        # inv_gray = cv.bitwise_not(gray)
+        # equalize_image = cv.equalizeHist(inv_gray)
         _, encoded_partial_image = cv.imencode(".jpg", gray)
-        _, source_encoded_image = cv.imencode(".jpg", partial_source_image)
+        # _, source_encoded_image = cv.imencode(".jpg", partial_source_image)
         image_partial_bytes = encoded_partial_image.tobytes()
-        source_image_bytes = source_encoded_image.tobytes()
+        # source_image_bytes = source_encoded_image.tobytes()
         image_base64 = base64.b64encode(image_partial_bytes).decode()
-        result_barcode = await detectBarcode(image_base64)        
+        result_barcode = await detectBarcode(image_base64)
         checking_content = result_barcode
+        print(f'{checking_content}')
         if checking_content.strip(' \n\x0c') is None or checking_content.strip(' \n\x0c')  =='':
             checking_content = 'Read Code not success'
             result = False
             final_color = (0, 0, 255)
-        cv.rectangle(return_image, top_left, bottom_right, final_color, 3)
         cv.rectangle(final_result_image, top_left, bottom_right, final_color, 3)
-        cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
-        resized_source_image = cv.resize(return_source_image, (width, height))
-        resized_image = cv.resize(return_image, (width, height))        
-        # final_result_image = await add_unicode_text_to_image(
-        #     final_result_image,
-        #     str(checking_content),
-        #     position=bottom_right,
-        #     font_path="Fonts/TitilliumWeb-Italic.ttf",
-        #     font_size=40,
-        #     text_color=(0, 0, 255),
-        # )
+        final_result_image = add_unicode_text_to_image(
+            final_result_image,
+            str(checking_content),
+            position=bottom_right,
+            font_path="Fonts/TitilliumWeb-Italic.ttf",
+            font_size=40,
+            text_color=(0, 0, 255),
+        )
+        # cv.rectangle(return_image, top_left, bottom_right, final_color, 3)    
+        # cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
+        # resized_source_image = cv.resize(return_source_image, (width, height))
+        # resized_image = cv.resize(return_image, (width, height))
+    cv.rectangle(return_image, top_left, bottom_right, final_color, 3)    
+    cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
+    resized_source_image = cv.resize(return_source_image, (width, height))
+    resized_image = cv.resize(return_image, (width, height))
     _, encoded_image = cv.imencode(".jpg", resized_image)
     _, sample_encoded_image = cv.imencode(".jpg", resized_source_image)
     image_bytes = encoded_image.tobytes()
@@ -618,19 +604,19 @@ async def calculate_async(area, return_image, return_source_image):
         # 'finalResultImage': '',
         "checkingContent": checking_content.strip(' \n\x0c'),
     }
-    final_data.append(tmp)
-    cv.imwrite(f"Results/{checking_type}-{item}-result.jpg", partial_area_image)
-    # # cv.imshow(partial_area_image)
-    
+    # # final_data.append(tmp)
+    # # cv.imwrite(f"Results/{checking_type}-{item}-result.jpg", partial_area_image)
+    # # # # cv.imshow(partial_area_image)
+    # cv.imwrite("result.jpg", final_result_image)
     if False in final_result:
         print("Defected")
-        visual_inspection_result = "FAIL"
-        visual_inspection_result_color = (255, 0, 0)
+        # visual_inspection_result = "FAIL"
+        # visual_inspection_result_color = (255, 0, 0)
 
     else:
         print("Similar")
-        visual_inspection_result = "PASS"
-        visual_inspection_result_color = (0, 255, 0)
+        # visual_inspection_result = "PASS"
+        # visual_inspection_result_color = (0, 255, 0)
 
     # cv.imshow(
     #     "final_result_image",
@@ -638,7 +624,6 @@ async def calculate_async(area, return_image, return_source_image):
     # )
 
     # # cv.imshow(final_result_image)
-    
     return tmp
 
 #global checking_results
@@ -648,7 +633,7 @@ async def check_not_in_position(image, template, area, original_image):
         original_top_left[1] : original_bottom_right[1],
         original_top_left[0] : original_bottom_right[0],
     ]
-  
+
     target_image_gray = cv.cvtColor(captured_image, cv.COLOR_BGR2GRAY)
     image_gray = await convert_to_gray(image)
     template_gray = await convert_to_gray(template)
@@ -665,7 +650,7 @@ async def check_not_in_position(image, template, area, original_image):
     count = 0
     wrong_color = True
     for method in methods:
-        
+
         res = cv.matchTemplate(image_gray, template_gray, method)
         _, max_val, max_loc, min_loc = cv.minMaxLoc(res)
         top_left = min_loc if method in [cv.TM_SQDIFF, cv.TM_SQDIFF_NORMED] else max_loc
@@ -690,20 +675,20 @@ async def check_not_in_position(image, template, area, original_image):
             wrong_color, roi = await get_color(
                 edge_difference, corner_difference, similar_area, template_crop
             )
-          
+
             # print(corners)
-            
-             
-            cv.imwrite(f"Results/shapes/origin/CORNERS-{method}{area}.jpg",origin_corners)
-            cv.imwrite(f"Results/shapes/origin/EDGES-{method}{area}.jpg",origin_edges) 
-            cv.imwrite(f"Results/shapes/CORNERS-{method}{area}.jpg",corners)
-            cv.imwrite(f"Results/shapes/EDGES-{method}{area}.jpg",edges)
+
+
+            # cv.imwrite(f"Results/shapes/origin/CORNERS-{method}{area}.jpg",origin_corners)
+            # cv.imwrite(f"Results/shapes/origin/EDGES-{method}{area}.jpg",origin_edges)
+            # cv.imwrite(f"Results/shapes/CORNERS-{method}{area}.jpg",corners)
+            # cv.imwrite(f"Results/shapes/EDGES-{method}{area}.jpg",edges)
 
 
 
             if edge_difference > 0.75:
-                cv.imwrite(f"Results/PASS-{method}{area}.jpg",image)
-                cv.imwrite(f"Results/PASS-{template}{area}.jpg",template)
+                # cv.imwrite(f"Results/PASS-{method}{area}.jpg",image)
+                # cv.imwrite(f"Results/PASS-{template}{area}.jpg",template)
                 checking_results[count] = False
                 count = count + 1
                 # print(pt)
@@ -711,9 +696,9 @@ async def check_not_in_position(image, template, area, original_image):
                 print(corner_difference)
                 # print(wrong_color)
                 return False
-               
+
         # if zip(*loc[::-1]) is None:
-            
+
         #     checking_results[count] = True
         #     count = count + 1
         #     return True
@@ -724,17 +709,17 @@ async def check_not_in_position(image, template, area, original_image):
     # print(wrong_color)
     cv.imwrite(f"Results/FAIL-{method}{area}.jpg",image)
     cv.imwrite(f"Results/FAIL-{template}{area}.jpg",template)
-    return True           
-           
-      
-    #if True in checking_results:          
-    
+    return True
+
+
+    #if True in checking_results:
+
     #else:
     # cv.imwrite(f"Results/FAIL-{method}{area}.jpg",image)
     # cv.imwrite(f"Results/FAIL-{template}{area}.jpg",template)
     #    return False
-        
-   
+
+
 
 
 async def convert_to_gray(image):
@@ -765,11 +750,11 @@ async def get_similar_area(captured_image, outer_top_left, bottom_right):
     return similar_area
 
 
-async def get_color(edge_difference, corner_difference, similar_area, template_crop):
-    wrong_color, roi = await compare_color_and_save_mask(
-        similar_area, template_crop, None, 60
-    )
-    return wrong_color, roi
+# async def get_color(edge_difference, corner_difference, similar_area, template_crop):
+#     wrong_color, roi = await compare_color_and_save_mask(
+#         similar_area, template_crop, None, 60
+#     )
+#     return wrong_color, roi
     # if edge_difference < 5 and corner_difference < 10:
     #     return (244, 187, 88) if wrong_color else (0, 255, 0)
     # else:
@@ -828,7 +813,7 @@ async def compare_features(image1, image2, feature_detector):
             if len(f2) == 0:
                 difference = 1000000
         else:
-          
+
             f1, corner1 = await detect_corners(image1)
             f2, corner2 = await detect_corners(image2)
             try:
@@ -932,17 +917,17 @@ async def process_visual():
     final_data = []
     checking_areas = await read_out_locations_need_to_be_checked(COORDINATE_FILE_PATH)
     #tasks = [aoi(area) for area in filter(lambda x: x[0] == "dc", checking_areas)]
-    image = cv.imread(IMAGE_PATH)
-    source_image = cv.imread(SOURCE_PATH)
+    
     #ocr_array = asyncio.gather(*tasks)
     main_tasks = [calculate_async(area, image, source_image) for area in checking_areas]
- 
+
     finish = await asyncio.gather(*main_tasks)
     # finish = await asyncio.gather(result)
     # with open("ocr_result.txt", "w") as File:
     #     for item in finish:
     #         if item is not None:
     #             File.write(str(item) + "\n")
+    
     return finish
 
 
@@ -953,24 +938,27 @@ async def async_checking():
     global final_result_image
     await delete_files_in_directory("Results")
     await capture_frame(False)
-    source_image = cv.imread(SOURCE_PATH)
+    # source_image = cv.imread(SOURCE_PATH)
+    # image = cv.imread(IMAGE_PATH)
+    # final_result_image = image.copy()
     image = cv.imread(IMAGE_PATH)
+    source_image = cv.imread(SOURCE_PATH)
     final_result_image = image.copy()
     final_result = []
     final_data = []
-    spell = add_special_words_to_dictionary()
-    contents = []
-    with open("ocr.txt") as file:
-        content_text = file.read()
-        for i in content_text.strip():
-            if i is not None:
-                spell.word_frequency.add(i)    
+    # spell = add_special_words_to_dictionary()
+    # contents = []
+    # with open("ocr.txt") as file:
+    #     content_text = file.read()
+    #     for i in content_text.strip():
+    #         if i is not None:
+    #             spell.word_frequency.add(i)
     final_data_list = await process_visual()
     visual_data_json = json.dumps(final_data_list)
-    cv.imwrite("Results/result.jpg", final_result_image)
+    # cv.imwrite("Results/result.jpg", final_result_image)
     cv.imwrite("result.jpg", final_result_image)
     # display('Results/result.jpg')
-   
+
     return visual_data_json
 
 async def delete_files_in_directory(directory):
@@ -998,14 +986,14 @@ async def delete_files_in_directory(directory):
                 # Print an error message if deletion fails
                 print(f"Error deleting directory: {dir_path}, {e}")
 
-def read_text_from_image(image99 , angle,threshold):
+async def read_text_from_image(image99 , angle,threshold):
     # Load the image
     # image99 = cv.imread(path)
     text = ''
     # Convert the image to grayscale
     # Convert to grayscale
     gray = cv.cvtColor(image99, cv.COLOR_BGR2GRAY)
-    cv.imwrite('Results/grayScale.jpg',gray)
+    # cv.imwrite('Results/grayScale.jpg',gray)
     dictionary_text = read_txt_file(DICTIONARY_FILE)
     # Split the dictionary text into words
     dictionary_words = dictionary_text.split()
@@ -1015,7 +1003,7 @@ def read_text_from_image(image99 , angle,threshold):
     # _, thresh = cv.threshold(gray, 0, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
     # for angle in range(0,361,45):
     # Open the image file
-    imageR = Image.open('Results/grayScale.jpg')
+    imageR = Image.fromarray(gray)
     # custom_config = r'--oem 1 --psm 6 -l friwo-ocr -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
     custom_config = r'--oem 1 --psm 6 -l eng -c tessedit_char_whitelist= .+-*/0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
     # Rotate the image by 90 degrees counter-clockwise
@@ -1026,41 +1014,45 @@ def read_text_from_image(image99 , angle,threshold):
     # Ensure the TESSDATA_PREFIX environment variable is set to the tessdata directory
     # os.environ['TESSDATA_PREFIX'] = '/usr//tesseract-ocr/4.00/tessdata'
     # Save the rotated image
-    rotated_image.save(f"Rotate/rotated_image_{angle}.jpg")
+    # rotated_image.save(f"Rotate/rotated_image_{angle}.jpg")
+    # languages = 'eng'
+    # img_rotate = cv.imread(f'Rotate/rotated_image_{angle}.jpg')
+    img_rotate = np.asarray(rotated_image)
 
-    img_rotate = cv.imread(f'Rotate/rotated_image_{angle}.jpg')    
+    # dst = cv.GaussianBlur(img_rotate, (15, 15), 0)
     dst = cv.GaussianBlur(img_rotate, (15, 15), 0)
-    gray = cv.cvtColor(dst, cv.COLOR_BGR2GRAY)
-    inv_gray = cv.bitwise_not(gray)    
-    ret, thresholded = cv.threshold(dst, threshold, 255, cv.THRESH_BINARY)
-    cv.imwrite('Results/threshold_inv.jpg',thresholded)
+    # gray = cv.cvtColor(dst, cv.COLOR_BGR2GRAY)
+    inv_gray = cv.bitwise_not(dst)
+    ret, thresholded = cv.threshold(dst, threshold, 255, cv.THRESH_BINARY + cv.THRESH_OTSU)
+    # cv.imwrite(f'Results/threshold_inv_{threshold}.jpg',thresholded)
     # Perform OCR on the thresholded image
-    temp_text = pytesseract.image_to_string(dst, config= custom_config) 
+    #temp_text = pytesseract.image_to_string(dst, config= custom_config)
+    loop = asyncio.get_running_loop()
+    temp_text = await loop.run_in_executor(
+            None, 
+            lambda: image_to_string(thresholded, config=custom_config)
+        )
 
-    
+
+
 
     print(f'{temp_text}')
+    if temp_text is None:
+        return ''
         # Split the long string into words
-    long_string_words = temp_text.strip(' \n\x0c').split()      
-    # Iterate through each word in the long string
-    for word in long_string_words:
-        # Check if the word exists in the dictionary text
-        if word in dictionary_words:
-            if word not in matched_parts:
-                # If found, add it to the matched parts list
-                matched_parts.append(word)
-    # # Apply Gaussian blur and adaptive thresholding
-    # blur = cv.GaussianBlur(gray, (5, 5), 0)
-    # thresh = cv.adaptiveThreshold(blur, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 4)
-
-    
-
-    # Join the matched parts to form a string
-    # text = ' '.join(matched_parts)
+    # long_string_words = temp_text.strip(' \n\x0c').split()
+    # # Iterate through each word in the long string
+    # for word in long_string_words:
+    #     # Check if the word exists in the dictionary text
+    #     if word in dictionary_words:
+    #         if word not in matched_parts:
+    #             # If found, add it to the matched parts list
+    #             matched_parts.append(word)
+   
     if text == '':
         if len(temp_text) > len(text):
             text = temp_text.strip(' \n\x0c')
-    
+
     print(f'Final: {text}')
     return text.strip(' \n\x0c')
 
@@ -1070,27 +1062,27 @@ def shape_check(source,image99,threshold):
     image_point = 0
     source_point = 0
     # Initialize a difference image
-    diff_image = np.zeros_like(source, dtype=np.uint8)
+    # diff_image = np.zeros_like(source, dtype=np.uint8)
 
     # Find differences between the two images
-    diff_points = cv.absdiff(source, image99)
+    # diff_points = cv.absdiff(source, image99)
     diff_points_gray = cv.cvtColor(image99, cv.COLOR_BGR2GRAY)
     source_gray = cv.cvtColor(source, cv.COLOR_BGR2GRAY)
-    cv.imwrite('Results/Diff_point.jpg',diff_points_gray)
+    # cv.imwrite('Results/Diff_point.jpg',diff_points_gray)
     # Threshold the difference image to highlight the differing points
     _, thresholded_diff = cv.threshold(diff_points_gray, threshold, 255, cv.THRESH_BINARY_INV)
     _, thresholded_source = cv.threshold(source_gray, threshold, 255, cv.THRESH_BINARY_INV)
-    cv.imwrite('Results/threshold_diff_point.jpg',thresholded_diff)
-    cv.imwrite('Results/threshold_source_point.jpg',thresholded_source)
+    # cv.imwrite('Results/threshold_diff_point.jpg',thresholded_diff)
+    # cv.imwrite('Results/threshold_source_point.jpg',thresholded_source)
     # Find contours to identify differing regions
     contours, _ = cv.findContours(thresholded_diff, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     contours_source, _ = cv.findContours(thresholded_source, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    image_point = len(contours)    
+    image_point = len(contours)
     source_point = len(contours_source)
     diff_count = source_point - image_point
     if source_point == 0:
         source_point = 1
-    if diff_count < 0 : 
+    if diff_count < 0 :
         diff_count = (diff_count * -1)
     if (diff_count / source_point)*100 <35:
         result += 1
@@ -1099,22 +1091,22 @@ def shape_check(source,image99,threshold):
 
 def squared_error(source,image99,threshold):
     result = 0
-    # Convert images to grayscale    
+    # Convert images to grayscale
     gray_image1 = cv.cvtColor(source, cv.COLOR_BGR2GRAY)
     gray_image2 = cv.cvtColor(image99, cv.COLOR_BGR2GRAY)
     # gray_image1 = 255-source
     # gray_image2 = 255-image99
-    cv.imwrite('Results/partialSource.jpg',gray_image1)
-    cv.imwrite('Results/partialimage.jpg',gray_image2)    
-    cv.imwrite('Results/partialSourceOrigin.jpg',source)
-    cv.imwrite('Results/partialimageOrigin.jpg',image99)
-   
+    # cv.imwrite('Results/partialSource.jpg',gray_image1)
+    # cv.imwrite('Results/partialimage.jpg',gray_image2)
+    # cv.imwrite('Results/partialSourceOrigin.jpg',source)
+    # cv.imwrite('Results/partialimageOrigin.jpg',image99)
+
     # Apply thresholding to the edge difference image
     threshold_value = 80  # Adjust this value as needed
     ret, thresholded_diff_source = cv.threshold(gray_image1, threshold, 255, cv.THRESH_BINARY)
     ret, thresholded_diff_image = cv.threshold(gray_image2, threshold, 255, cv.THRESH_BINARY)
-    cv.imwrite('Results/threshold_diff_source.jpg',thresholded_diff_source)
-    cv.imwrite('Results/threshold_diff_image.jpg',thresholded_diff_image)
+    # cv.imwrite('Results/threshold_diff_source.jpg',thresholded_diff_source)
+    # cv.imwrite('Results/threshold_diff_image.jpg',thresholded_diff_image)
     # Find contours in both images
     contours1, _ = cv.findContours(thresholded_diff_source, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
     contours2, _ = cv.findContours(thresholded_diff_image, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -1126,14 +1118,14 @@ def squared_error(source,image99,threshold):
     #         print(point[0][0])
     #         cv.circle(drawed_image, (point[0][0],point[0][1]) , radius=0, color=(0, 0, 255), thickness=-1)
     #         cv.imwrite('Results/draw_image.jpg',drawed_image)
-   
+
     # Create a blank image to draw contours on
     contour_image = np.zeros_like(source)
 
     # Draw contours on the blank image
     cv.drawContours(contour_image, contours1, -1, (255, 255, 255), 1)
     # Save the contour image
-    cv.imwrite('Results/contours_image1.jpg', contour_image)
+    # cv.imwrite('Results/contours_image1.jpg', contour_image)
 
     # Create a blank image to draw contours on
     contour_image = np.zeros_like(image99)
@@ -1141,7 +1133,7 @@ def squared_error(source,image99,threshold):
     # Draw contours on the blank image
     cv.drawContours(contour_image, contours2, -1, (255, 255, 255), 1)
     # Save the contour image
-    cv.imwrite('Results/contours_image2.jpg', contour_image)
+    # cv.imwrite('Results/contours_image2.jpg', contour_image)
 
     # Initialize a counter for shape differences
     shape_diff_count = 0
@@ -1167,7 +1159,7 @@ def squared_error(source,image99,threshold):
     # print("Mean Squared Error (MSE):", mse)
     return result
 
-def corlor_check(source_image,curr_image):
+def color_check(source_image,curr_image,threshold):
     # # Load the two images
     # image1 = cv.imread('image1.jpg')
     # image2 = cv.imread('image2.jpg')
@@ -1180,9 +1172,9 @@ def corlor_check(source_image,curr_image):
     diff = cv.absdiff(source_rgb, curr_rgb)
 
     # Threshold the difference image to highlight significant differences
-    threshold = 30
+    # threshold = 30
     _,diff_thresholded = cv.threshold(diff, threshold, 255, cv.THRESH_BINARY)
-    cv.imwrite('Results/threshold_color.jpg',diff_thresholded)
+    # cv.imwrite('Results/threshold_color.jpg',diff_thresholded)
     result = np.count_nonzero(diff_thresholded)
     return result
 
@@ -1213,31 +1205,6 @@ def display(im_path):
 
     plt.savefig()
  
- # Step 2: Define the asynchronous function
-async def print_numbers_async(name, count,area, image, source_image):
-    global final_result_image
-    image = image
-   
-    final_result_image = final_result_image
-    final_result = []
-    return_image = image.copy()
-    return_source_image = source_image.copy()
-    checking_type, item,angle,threshold = area 
-    from datetime import datetime  
-    print(str(item) + str(datetime.now()))
-    result = False
-    checking_content = ""
-    top_left, bottom_right = item
-    checking_type, item,angle,threshold = area 
-    from datetime import datetime  
-    print('Strart: '+str(item) + str(datetime.now()))
-    if checking_type == 'o':
-        await asyncio.sleep(3)  # Simulate a non-blocking delay
-    elif checking_type =='sc':
-        await asyncio.sleep(2)  # Simulate a non-blocking delay
-    elif checking_type =='c':
-        await asyncio.sleep(1)  # Simulate a non-blocking delay
-    print('End: '+str(item) + str(datetime.now()))
 
 if __name__ == '__main__':
     asyncio.run(async_checking())
