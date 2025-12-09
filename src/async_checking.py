@@ -16,6 +16,7 @@ from skimage.metrics import structural_similarity as ssim
 from Scan_Barcode import detectBarcode
 from Template_Matching import template_check
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 async def read_out_locations_need_to_be_checked(coordinate_file_path):
     areas = []
@@ -438,7 +439,7 @@ async def calculate_async(area, origin_image, origin_source_image):
     # return_source_image= origin_image.copy()
     # return_image = origin_source_image.copy()
     checking_type, item,angle,threshold = area
-    from datetime import datetime
+    
     print(str(item) + str(datetime.now()))
     result = False
     checking_content = ""
@@ -449,7 +450,7 @@ async def calculate_async(area, origin_image, origin_source_image):
     # source_bottom_right_y: int = int(item.strip().split(',')[3]+5)
 
     # Set the desired percentage of resizing
-    scale_percent = 20  # Adjust this value to the desired percentage
+    scale_percent = 10  # Adjust this value to the desired percentage
 
     # Calculate the new dimensions based on the percentage
     width = int(return_source_image.shape[1] * scale_percent / 100)
@@ -491,11 +492,12 @@ async def calculate_async(area, origin_image, origin_source_image):
     # image = cv.GaussianBlur(image, (5, 5), 0)
     if checking_type == "c":
        
-        corlor_diff = color_check(partial_source_image,partial_area_image,threshold)
+        # corlor_diff = color_check(partial_source_image,partial_area_image,threshold)
+        corlor_check = color_check_HLS(partial_source_image,partial_area_image)
         # corlor_diff=1
-        print(f"Color Diff: {corlor_diff}")
+        print(f"Color Diff: {corlor_check}")
         
-        if  corlor_diff < 100:
+        if  corlor_check > 0.1:
             result = True
             final_color = (0, 255, 0)
         else:
@@ -584,8 +586,8 @@ async def calculate_async(area, origin_image, origin_source_image):
         # cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
         # resized_source_image = cv.resize(return_source_image, (width, height))
         # resized_image = cv.resize(return_image, (width, height))
-    cv.rectangle(return_image, top_left, bottom_right, final_color, 3)    
-    cv.rectangle(return_source_image, top_left, bottom_right, final_color, 3)
+    cv.rectangle(return_image, top_left, bottom_right, final_color, 10)    
+    cv.rectangle(return_source_image, top_left, bottom_right, final_color, 10)
     resized_source_image = cv.resize(return_source_image, (width, height))
     resized_image = cv.resize(return_image, (width, height))
     _, encoded_image = cv.imencode(".jpg", resized_image)
@@ -936,8 +938,8 @@ async def process_visual():
 async def async_checking():
     global image,source_image
     global final_result_image
-    await delete_files_in_directory("Results")
-    await capture_frame(False)
+    # await delete_files_in_directory("Results")
+    await capture_image_1(False)
     # source_image = cv.imread(SOURCE_PATH)
     # image = cv.imread(IMAGE_PATH)
     # final_result_image = image.copy()
@@ -956,7 +958,7 @@ async def async_checking():
     final_data_list = await process_visual()
     visual_data_json = json.dumps(final_data_list)
     # cv.imwrite("Results/result.jpg", final_result_image)
-    cv.imwrite("result.jpg", final_result_image)
+    # cv.imwrite("result.jpg", final_result_image)
     # display('Results/result.jpg')
 
     return visual_data_json
@@ -1160,23 +1162,142 @@ def squared_error(source,image99,threshold):
     return result
 
 def color_check(source_image,curr_image,threshold):
-    # # Load the two images
-    # image1 = cv.imread('image1.jpg')
-    # image2 = cv.imread('image2.jpg')
-    result = 0
-    # Convert the images to the same color space (e.g., RGB)
-    source_rgb = cv.cvtColor(source_image, cv.COLOR_BGR2RGB)
-    curr_rgb = cv.cvtColor(curr_image, cv.COLOR_BGR2RGB)
+    
+    
 
-    # Compute the absolute difference between the images
-    diff = cv.absdiff(source_rgb, curr_rgb)
+    # Convert the images to the LAB color space
+    source_lab = cv.cvtColor(source_image, cv.COLOR_BGR2HSV)
+    cv.imwrite(f'Results/threshold_color{datetime.now()}.jpg',source_lab)
+    curr_lab = cv.cvtColor(curr_image, cv.COLOR_BGR2HSV)
+    cv.imwrite(f'Results/threshold_color{datetime.now()}.jpg',curr_lab)
 
-    # Threshold the difference image to highlight significant differences
-    # threshold = 30
-    _,diff_thresholded = cv.threshold(diff, threshold, 255, cv.THRESH_BINARY)
-    # cv.imwrite('Results/threshold_color.jpg',diff_thresholded)
-    result = np.count_nonzero(diff_thresholded)
-    return result
+    
+    diff = cv.absdiff(source_lab, curr_lab)
+
+    # Sum up the differences across the three LAB channels
+    diff_sum = np.sum(diff, axis=2).astype(np.uint8)  # Ensure it's 8-bit grayscale
+
+    # Apply a threshold to identify significant color differences
+    _, diff_thresholded = cv.threshold(diff_sum, threshold, 255, cv.THRESH_BINARY)
+
+    # Count the number of different pixels
+    num_diff_pixels = np.count_nonzero(diff_thresholded)
+
+    # Get the total number of pixels in the image
+    total_pixels = source_image.shape[0] * source_image.shape[1]
+
+    # Calculate the percentage of different pixels
+    diff_percent = (num_diff_pixels / total_pixels) * 100    
+  
+    print(f"Color Diff: {diff_percent}%")
+    return diff_percent
+
+def color_check_hsv(source_image, curr_image, h_thresh=10, s_thresh=40, v_thresh=40):
+    # Convert both images to HSV color space
+    source_hsv = cv.cvtColor(source_image, cv.COLOR_BGR2HSV)
+    curr_hsv = cv.cvtColor(curr_image, cv.COLOR_BGR2HSV)
+
+    # Split into individual H, S, V channels
+    h1, s1, v1 = cv.split(source_hsv)
+    h2, s2, v2 = cv.split(curr_hsv)
+
+    # Compute absolute differences
+    h_diff = cv.absdiff(h1, h2)
+    s_diff = cv.absdiff(s1, s2)
+    v_diff = cv.absdiff(v1, v2)
+
+    # Apply per-channel thresholds (tunable)
+    h_mask = (h_diff > h_thresh).astype(np.uint8)
+    s_mask = (s_diff > s_thresh).astype(np.uint8)
+    v_mask = (v_diff > v_thresh).astype(np.uint8)
+
+    # Combine the masks (any channel different = difference)
+    combined_mask = cv.bitwise_or(h_mask, s_mask)
+    combined_mask = cv.bitwise_or(combined_mask, v_mask)
+
+    # Count differing pixels
+    num_diff_pixels = np.count_nonzero(combined_mask)
+    total_pixels = source_image.shape[0] * source_image.shape[1]
+    print(f"diff pixels: {num_diff_pixels}")
+    print(f"total pixels: {total_pixels}")
+    # Return percentage of different pixels
+    diff_percent = (num_diff_pixels / total_pixels) * 100
+    return diff_percent
+
+def color_check_HLS(source_image,curr_image):
+    
+    # Example thresholds (you may need to adjust these values)
+    lower_red = np.array([0, 120, 70])
+    upper_red = np.array([10, 255, 255])
+    lower_red2 = np.array([170, 120, 70])
+    upper_red2 = np.array([180, 255, 255])
+
+    # Convert the images to the LAB color space
+    # source_lab = cv.cvtColor(source_image, cv.COLOR_BGR2HSV)
+    # cv.imwrite(f'Results/threshold_color{datetime.now()}.jpg',source_lab)
+    # cv.imwrite(f'Results/CURR_IMG{datetime.now()}.jpg',curr_image)
+    curr_lab = cv.cvtColor(curr_image, cv.COLOR_BGR2HSV)
+    # cv.imwrite(f'Results/threshold_color{datetime.now()}.jpg',curr_lab)
+    # Create two masks and combine them
+    mask1 = cv.inRange(curr_lab, lower_red, upper_red)
+    mask2 = cv.inRange(curr_lab, lower_red2, upper_red2)
+    red_mask  = mask1 + mask2
+    # cv.imwrite(f'Results/redmark_color{datetime.now()}.jpg',red_mask)
+    # Calculate the percentage of pixels that are red:
+    total_pixels = red_mask.shape[0] * red_mask.shape[1]
+    # countNonZero returns the number of non-zero pixels (i.e. those that are 255 in our binary mask)
+    red_pixels = cv.countNonZero(red_mask)
+    red_percentage = (red_pixels / total_pixels) * 100
+    print(f"Percentage of red in the image: {red_percentage:.2f}%")     
+    return red_percentage
+
+async def capture_image_1(source):
+    # raspi_io.__init__()
+    # raspi_io.flash_on()
+    if source:
+        file_name = "Sources/source_image.jpg"        
+    else:
+        file_name = "captured_image.jpg"
+    ffmpeg_cmd = [
+        "libcamera-still",
+        "--timeout",
+        "400",
+        #"--width",
+        #"4056",
+        # "--height",
+        # "3040",
+        # "--autofocus-mode",
+        # "auto",
+        # "--autofocus-range",
+        # "full",
+        # "--autofocus-speed",
+        # "fast",
+        # "--autofocus-window","0.2,0.2,0.8,0.8",
+        # "--shutter",
+        # "3000",
+        #"--sharp",
+        #"5",
+        # "--contrast",
+        # "1",
+        #"--bright",
+        #"0.2",
+        # "--vflip",
+        # "1",
+        # "--hflip",
+        # "1",
+        # "--hdr","sensor",
+        # "--autofocus-on-capture",
+        # "1",
+        "-f",
+        "1",        
+        #"--denoise",
+        #"cdn_hq",
+        "-o",
+        file_name
+    ]
+    subprocess.run(ffmpeg_cmd)
+    # raspi_io.flash_off()
+    # raspi_io.cleanup()
 
 # Read the content of the TXT file
 def read_txt_file(file_path):

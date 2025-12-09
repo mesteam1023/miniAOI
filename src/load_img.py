@@ -11,6 +11,8 @@ from Object.Coordinates import Coordinates
 from Object.Coordinates import serialize_coordinates
 import subprocess
 from Image_Processing import encode_image_to_base64
+import serial
+import serial.tools.list_ports
 
 input_file_path = 'input.txt'
 output_file_path = 'output.txt'
@@ -19,13 +21,43 @@ part_No=''
 class GRBLApp:
     def __init__(self, root):
         self.root = root
+        self.grbl = None
+        self.is_jogging = False
         
     async def setup(self):
         # Your async initialization code here
         await self.setup_ui()
+    
+    def setup_sync(self):
+        """Synchronous version of setup for direct initialization"""
+        self.setup_ui_sync()
+    
+    def setup_ui_sync(self):
+        """Synchronous UI setup"""
+        self.root.title("GRBL Controller")
+        self.root.attributes('-fullscreen', True)
+        self.root.grid_columnconfigure(0, weight=3)
+        self.root.grid_columnconfigure(1, weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
 
-    def close_app(self):
-        self.root.destroy()
+        self.image_frame = tk.Frame(self.root)
+        self.image_frame.grid(row=0, column=0, rowspan=20, sticky="nsew")
+
+        self.control_frame = tk.Frame(self.root)
+        self.control_frame.grid(row=0, column=1, rowspan=20, sticky="nsew")
+
+        self.canvas = tk.Canvas(self.image_frame)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
+
+        h_scroll = Scrollbar(self.image_frame, orient=tk.HORIZONTAL, command=self.canvas.xview)
+        h_scroll.pack(side=tk.BOTTOM, fill=tk.X)
+        v_scroll = Scrollbar(self.image_frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        v_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.canvas.config(xscrollcommand=h_scroll.set, yscrollcommand=v_scroll.set)
+        self.canvas.bind("<Button-1>", self.display_coordinates)
+
+        self.create_controls_sync()
 
     async def setup_ui(self):
         self.root.title("GRBL Controller")
@@ -54,11 +86,59 @@ class GRBLApp:
 
         await self.create_controls()
 
-    async def create_controls(self):
+    def close_app(self):
+        self.root.destroy()
+
+    def create_controls_sync(self):
+        """Synchronous version of create_controls"""
+        # Get a list of all available ports
+        import serial.tools.list_ports
+        
+        ports = serial.tools.list_ports.comports()
+        port_grbl=''
+        for port in ports:
+            port_grbl = port.device
         tk.Label(self.control_frame, text="Port:").grid(row=0, column=0)
         self.port_entry = tk.Entry(self.control_frame)
         self.port_entry.grid(row=0, column=1)
-        self.port_entry.insert(0, 'COM14')
+        self.port_entry.insert(0, port_grbl)
+
+        tk.Label(self.control_frame, text="Baudrate:").grid(row=1, column=0)
+        self.baudrate_entry = tk.Entry(self.control_frame)
+        self.baudrate_entry.grid(row=1, column=1)
+        self.baudrate_entry.insert(0, '115200')
+
+        self.connect_button = tk.Button(self.control_frame, text="Connect", command=self.on_connect)
+        self.connect_button.grid(row=2, column=0, columnspan=2)
+
+        self.create_jog_controls()
+
+        self.status_button = tk.Button(self.control_frame, text="Get Status", command=self.on_status)
+        self.status_button.grid(row=7, column=0, columnspan=2)
+
+        self.reset_button = tk.Button(self.control_frame, text="Reset Zero", command=self.on_reset_zero)
+        self.reset_button.grid(row=8, column=0, columnspan=2)
+
+        self.load_button =tk.Button(self.control_frame, text="Load Image", command=self.load_image_async)
+        self.load_button.grid(row=9, column=0, columnspan=2)
+
+        self.create_text_controls()
+
+        self.coords_label = tk.Label(self.control_frame, text="Coordinates: (0, 0)")
+        self.coords_label.grid(row=30, column=0, columnspan=2)
+        self.progress = ttk.Progressbar(self.control_frame, orient=tk.HORIZONTAL, length=400, mode='determinate')
+        self.progress.grid(row=32, column=0, columnspan=2)
+
+    async def create_controls(self):
+        # Get a list of all available ports
+        ports = serial.tools.list_ports.comports()
+        port_grbl=''
+        for port in ports:
+            port_grbl = port.device
+        tk.Label(self.control_frame, text="Port:").grid(row=0, column=0)
+        self.port_entry = tk.Entry(self.control_frame)
+        self.port_entry.grid(row=0, column=1)
+        self.port_entry.insert(0, port_grbl)
 
         tk.Label(self.control_frame, text="Baudrate:").grid(row=1, column=0)
         self.baudrate_entry = tk.Entry(self.control_frame)
@@ -154,14 +234,14 @@ class GRBLApp:
                 response_120 = self.grbl.send_command('$120=100')
                 response_121 = self.grbl.send_command('$121=100')
                 response_122 = self.grbl.send_command('$122=100')
-                messagebox.showinfo("Connection", "Connected to GRBL!\n$120 Response: {}\n$121 Response: {}\n$122 Response: {}".format(response_120, response_121, response_122))
+                messagebox.showinfo("Connection", "Connected to GRBL!\n$120 Response: {}\n$121 Response: {}\n$122 Response: {}".format(response_120, response_121, response_122), parent=self.root)
                 self.connect_button.config(text="Connected", state=tk.DISABLED)
                 self.port_entry.config(state=tk.DISABLED)
                 self.baudrate_entry.config(state=tk.DISABLED)
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to send commands: {e}")
+                messagebox.showerror("Error", f"Failed to send commands: {e}", parent=self.root)
         else:
-            messagebox.showerror("Connection", "Failed to connect to GRBL.")
+            messagebox.showerror("Connection", "Failed to connect to GRBL.", parent=self.root)
 
     def start_jogging(self, x, y, z):
         self.is_jogging = True
@@ -178,21 +258,21 @@ class GRBLApp:
                 print("Jog Response:", response)
                 time.sleep(0.1)
         else:
-            messagebox.showerror("Error", "Not connected to GRBL.")
+            messagebox.showerror("Error", "Not connected to GRBL.", parent=self.root)
 
     def on_status(self):
         if self.grbl:
             status = self.grbl.get_status()
-            messagebox.showinfo("Status", status)
+            messagebox.showinfo("Status", status, parent=self.root)
         else:
-            messagebox.showerror("Error", "Not connected to GRBL.")
+            messagebox.showerror("Error", "Not connected to GRBL.", parent=self.root)
 
     def on_reset_zero(self):
         if self.grbl:
             response = self.grbl.reset_zero()
-            messagebox.showinfo("Reset Zero", response)
+            messagebox.showinfo("Reset Zero", response, parent=self.root)
         else:
-            messagebox.showerror("Error", "Not connected to GRBL.")
+            messagebox.showerror("Error", "Not connected to GRBL.", parent=self.root)
     
     
     # def on_button_click(self):
@@ -267,7 +347,7 @@ class GRBLApp:
         with open('SampleId.txt', 'r') as file:
             for line in file:
                 id = int(line.strip())
-        # url = f"http://10.100.10.83:5000/api/VisualIspection/PD/GetSamplePicture?id={id}"
+        # url = f"http://10.40.65.9:5000/api/VisualIspection/PD/GetSamplePicture?id={id}"
         # response = requests.get(url)
               
         # result_list = json.loads(response.content)
@@ -284,7 +364,8 @@ class GRBLApp:
                     rotate = line_data[5]
                     threshold = line_data[6]     
                     coordinates = Coordinates(0,partNo,type,str(id),top_left,bottom_right,rotate,threshold.replace('\n',''))            
-                    url = "http://10.100.10.83:5000/api/VisualIspection/QD/InsertCoordinates"
+                    # API Vincent
+                    url = "http://10.40.65.9:5000/api/VisualIspection/QD/InsertCoordinates"
                             
 
                     data = json.dumps(coordinates, default=serialize_coordinates)
@@ -299,13 +380,16 @@ class GRBLApp:
                 except Exception as e:
                     print(f"An error occurred: {e}")
                     break
-        url1 = f"http://10.100.10.83:5000/api/VisualIspection/PD/getCoordinates?partNo={partNo}"
+        #API Vincent
+        url1 = f"http://10.40.65.9:5000/api/VisualIspection/PD/getCoordinates?partNo={partNo}"
         response1 = requests.get(url1)
+
         # Convert Base64 bytes to string (optional, depending on your use case)
 
         # print(
         #     response.content
         # )
+        
         count = 0
         result_list1 = json.loads(response1.content)
         with open(file_path, 'w') as file:
@@ -329,7 +413,7 @@ class GRBLApp:
         self.TakeCoordinates(part_No)
         self.part_no.delete(0, tk.END)
         self.part_no.focus_set()
-        messagebox.showinfo("Information", "Update Sample done!")
+        messagebox.showinfo("Information", "Update Sample done!", parent=self.root)
     
     def capture_frame(self,source):
         # raspi_io.__init__()
@@ -341,7 +425,7 @@ class GRBLApp:
         ffmpeg_cmd = [
             "libcamera-still",
             "--timeout",
-            "750",
+            "2850",
             "--width",
             "4056",
             "--height",
@@ -355,28 +439,28 @@ class GRBLApp:
             # "--autofocus-window","0.2,0.2,0.8,0.8",
             # "--shutter",
             # "3000",
-            "--sharp",
-            "5",
+            # "--sharp",
+            # "5",
             # "--contrast",
             # "1",
-            "--bright",
-            "0.2",
-            "--vflip",
-            "1",
-            "--hflip",
-            "1",
+            # "--bright",
+            # "0.2",
+            # "--vflip",
+            # "1",
+            # "--hflip",
+            # "1",
             # "--hdr","sensor",
             # "--autofocus-on-capture",
             # "1",
             "-f",
             "1",        
-            "--denoise",
-            "cdn_hq",
+            # "--denoise",
+            # "cdn_hq",
             "-o",
             file_name
         ]
         subprocess.run(ffmpeg_cmd)
-        url = "http://10.100.10.83:5000/api/VisualIspection/QD/InputSample"
+        url = "http://10.40.65.9:5000/api/VisualIspection/QD/InputSample"
             # url = "https://my-json-server.typicode.com/JasonNguyen1205/GitRepo/sample"
         source_path = 'Sources/source_image.jpg'
         picture = encode_image_to_base64(source_path)
@@ -384,7 +468,7 @@ class GRBLApp:
         data = json.dumps({
             "id": 0,
             "picture": picture,
-            "remark": "Test"
+            "remark": "Vincent"
         })
         headers = {'Content-Type': 'application/json'}
         response = requests.post(url, data=data, headers=headers)
